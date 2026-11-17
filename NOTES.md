@@ -192,6 +192,15 @@ cmake --build build
   - Low-elevation atmospheric ground haze slab (`killY - 2.0m`, $360\text{m} \times 3\text{m} \times 360\text{m}$) rendered below the course to eliminate empty void.
   - Procedural 3D drifting cube clouds rendered high above play area ($Y \approx 48\text{m}$ to $53\text{m}$) with soft outlines.
 
+### Step 5: Advanced Projected Drop Shadows & Dynamic Scaling
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - Enhanced player drop shadow with two concentric layers: an inner dense core (`SHADOW_MAX_ALPHA = 175`) and an outer soft penumbra fringe.
+  - Implemented quadratic distance falloff ($(1 - d/d_{max})^2$) and smooth radius scaling ($0.95\text{m} \to 0.45\text{m}$) up to 18m elevation.
+  - Added projected downward raycasted blob shadows for moving platforms (`movers`) and rotating hazard bars (`spinners`) projected onto solid surfaces below with height-dependent scaling and fading.
+  - Elevated all projected shadows with `SHADOW_OFFSET_Y = 0.025m` to guarantee zero surface flicker or grazing-angle z-fighting.
+
+
 
 
 

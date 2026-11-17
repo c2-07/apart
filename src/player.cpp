@@ -257,13 +257,24 @@ void Player::DrawShadow(const std::vector<AABB>& colliders) const {
     Vector3 rayOrigin = { position.x, position.y + 0.1f, position.z };
     Vector3 rayDir = { 0.0f, -1.0f, 0.0f };
 
-    if (RaycastScene(rayOrigin, rayDir, 0.01f, 16.0f, colliders, &hitDist)) {
+    if (RaycastScene(rayOrigin, rayDir, 0.01f, Constants::SHADOW_MAX_DISTANCE, colliders, &hitDist)) {
         float shadowY = rayOrigin.y - hitDist + Constants::SHADOW_OFFSET_Y;
-        float progress = std::clamp(hitDist / 16.0f, 0.0f, 1.0f);
-        float radius = 0.85f * (1.0f - progress * 0.45f);
-        unsigned char alpha = static_cast<unsigned char>((1.0f - progress) * 150.0f);
+        float progress = std::clamp(hitDist / Constants::SHADOW_MAX_DISTANCE, 0.0f, 1.0f);
 
-        DrawCube(Vector3{ position.x, shadowY, position.z }, radius, Constants::SHADOW_HEIGHT, radius, Color{ 15, 20, 30, alpha });
+        // Radius scales smoothly with elevation
+        float outerRadius = Constants::SHADOW_BASE_RADIUS - progress * (Constants::SHADOW_BASE_RADIUS - Constants::SHADOW_MIN_RADIUS);
+        float innerRadius = outerRadius * 0.55f;
+
+        // Quadratic falloff for natural contact shadow look
+        float fade = (1.0f - progress);
+        fade = fade * fade;
+        unsigned char outerAlpha = static_cast<unsigned char>(fade * (Constants::SHADOW_MAX_ALPHA * 0.5f));
+        unsigned char innerAlpha = static_cast<unsigned char>(fade * Constants::SHADOW_MAX_ALPHA);
+
+        // Outer soft fringe
+        DrawCube(Vector3{ position.x, shadowY, position.z }, outerRadius, Constants::SHADOW_HEIGHT, outerRadius, Color{ 15, 20, 30, outerAlpha });
+        // Inner dense core
+        DrawCube(Vector3{ position.x, shadowY + 0.002f, position.z }, innerRadius, Constants::SHADOW_HEIGHT, innerRadius, Color{ 10, 15, 25, innerAlpha });
     }
 }
 

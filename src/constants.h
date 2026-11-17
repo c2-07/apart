@@ -67,4 +67,10 @@ namespace Constants {
     constexpr float PLATFORM_CAP_HEIGHT = 0.10f;
     constexpr float PLATFORM_CAP_OVERHANG = 0.04f;
     constexpr float COLOR_VARIATION_INTENSITY = 0.06f;
+
+    // Shadows (Visual Pass Step 5)
+    constexpr float SHADOW_MAX_DISTANCE = 18.0f;
+    constexpr float SHADOW_BASE_RADIUS = 0.95f;
+    constexpr float SHADOW_MIN_RADIUS = 0.45f;
+    constexpr unsigned char SHADOW_MAX_ALPHA = 175;
 }

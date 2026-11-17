@@ -928,6 +928,40 @@ void Level::Draw() const {
     // 9. Ghost Clone (Milestone 6)
     ghost.Draw();
 
+    // Projected Object Shadows for Movers & Spinners
+    std::vector<AABB> staticColliders;
+    staticColliders.reserve(boxes.size());
+    for (const auto& b : boxes) staticColliders.push_back(b.aabb);
+
+    for (const auto& m : movers) {
+        float hitDist = 0.0f;
+        Vector3 rayOrigin = { m.currentPos.x, m.currentPos.y, m.currentPos.z };
+        Vector3 rayDir = { 0.0f, -1.0f, 0.0f };
+        if (RaycastScene(rayOrigin, rayDir, m.size.y * 0.5f, 20.0f, staticColliders, &hitDist)) {
+            float shadowY = rayOrigin.y - hitDist + Constants::SHADOW_OFFSET_Y;
+            float progress = std::clamp(hitDist / 20.0f, 0.0f, 1.0f);
+            float scale = 1.0f - progress * 0.25f;
+            unsigned char alpha = static_cast<unsigned char>((1.0f - progress) * 115.0f);
+            DrawCube(Vector3{ m.currentPos.x, shadowY, m.currentPos.z },
+                     m.size.x * scale, Constants::SHADOW_HEIGHT, m.size.z * scale,
+                     Color{ 15, 20, 30, alpha });
+        }
+    }
+
+    for (const auto& s : spinners) {
+        float hitDist = 0.0f;
+        Vector3 rayOrigin = { s.center.x, s.center.y, s.center.z };
+        Vector3 rayDir = { 0.0f, -1.0f, 0.0f };
+        if (RaycastScene(rayOrigin, rayDir, s.height * 0.5f, 15.0f, staticColliders, &hitDist)) {
+            float shadowY = rayOrigin.y - hitDist + Constants::SHADOW_OFFSET_Y;
+            float progress = std::clamp(hitDist / 15.0f, 0.0f, 1.0f);
+            unsigned char alpha = static_cast<unsigned char>((1.0f - progress) * 95.0f);
+            DrawCube(Vector3{ s.center.x, shadowY, s.center.z },
+                     s.length * 0.6f * (1.0f - progress * 0.3f), Constants::SHADOW_HEIGHT, 0.8f,
+                     Color{ 15, 20, 30, alpha });
+        }
+    }
+
     // 10. Checkpoints
     for (const auto& cp : checkpoints) {
         Vector3 padCenter = { cp.position.x, cp.position.y + Constants::CHECKPOINT_PAD_OFFSET_Y, cp.position.z };
