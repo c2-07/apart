@@ -15,6 +15,7 @@
 #include "checkpoint.h"
 #include "walker.h"
 #include "flyer.h"
+#include "bump_block.h"
 
 #include <iostream>
 #include <vector>
@@ -450,6 +451,88 @@ static int RunSmokeTest() {
         }
 
         std::cout << "[SMOKE-TEST] Enemy Hierarchy verified successfully!" << std::endl;
+    }
+
+    // 14. 2D Pass Step 3: Bump Block Verification
+    {
+        std::cout << "[SMOKE-TEST] Testing Bump Blocks..." << std::endl;
+
+        // 1. Solid collision test: player cannot jump through the bump block
+        {
+            BumpBlock block(Vec3{ 0.0f, 3.0f, 0.0f }, 1);
+            assert(block.isSolid());
+
+            // Check resting bounds
+            AABB bounds = block.getBounds();
+            assert(bounds.getMin().y == 2.5f);
+            assert(bounds.getMax().y == 3.5f);
+
+            // Simulate upward physics collision resolution
+            Player player;
+            player.init(Vec3{ 0.0f, 0.4f, 0.0f });
+            player.setVelocity(Vec3{ 0.0f, 15.0f, 0.0f });
+
+            std::vector<AABB> colliders = { bounds };
+            PlayerInput input;
+            player.updatePhysics(Constants::PHYSICS_DT, input, 0.0f, colliders);
+
+            // Ceiling impact stops upward velocity and snaps head to block bottom (head <= 2.5f, pos.y <= 0.5f)
+            assert(player.getPosition().y <= 0.501f);
+            assert(player.getVelocity().y == 0.0f);
+        }
+
+        // 2. Hitting from below releases a coin once and block becomes empty
+        {
+            BumpBlock block(Vec3{ 0.0f, 3.0f, 0.0f }, 1);
+            Player player;
+            player.init(Vec3{ 0.0f, 0.5f, 0.0f });
+            player.setVelocity(Vec3{ 0.0f, 4.0f, 0.0f });
+
+            assert(player.getCoins() == 0);
+            assert(block.getCoinsRemaining() == 1);
+            assert(!block.isEmpty());
+            assert(!block.isBouncing());
+
+            block.update(Constants::PHYSICS_DT, player);
+
+            assert(player.getCoins() == 1);
+            assert(block.getCoinsRemaining() == 0);
+            assert(block.isEmpty());
+            assert(block.isBouncing());
+
+            // A second hit when empty releases no more coins
+            block.update(Constants::PHYSICS_DT, player);
+            assert(player.getCoins() == 1);
+            assert(block.getCoinsRemaining() == 0);
+        }
+
+        // 3. Hitting from the side does nothing
+        {
+            BumpBlock block(Vec3{ 0.0f, 3.0f, 0.0f }, 1);
+            Player player;
+            player.init(Vec3{ 2.0f, 2.0f, 0.0f });
+            player.setVelocity(Vec3{ -5.0f, 0.0f, 0.0f });
+
+            block.update(Constants::PHYSICS_DT, player);
+            assert(player.getCoins() == 0);
+            assert(block.getCoinsRemaining() == 1);
+            assert(!block.isEmpty());
+        }
+
+        // 4. Hitting from above (standing on top) does nothing
+        {
+            BumpBlock block(Vec3{ 0.0f, 3.0f, 0.0f }, 1);
+            Player player;
+            player.init(Vec3{ 0.0f, 3.5f, 0.0f });
+            player.setVelocity(Vec3{ 0.0f, -5.0f, 0.0f });
+
+            block.update(Constants::PHYSICS_DT, player);
+            assert(player.getCoins() == 0);
+            assert(block.getCoinsRemaining() == 1);
+            assert(!block.isEmpty());
+        }
+
+        std::cout << "[SMOKE-TEST] Bump Blocks verified successfully!" << std::endl;
     }
 
     std::cout << "[SMOKE-TEST] ALL MILESTONES (M1 through M8) VERIFIED AND PASSED!" << std::endl;

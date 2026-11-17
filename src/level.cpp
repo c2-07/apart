@@ -8,6 +8,7 @@
 #include "raymath.h"
 #include "rlgl.h"
 #include "walker.h"
+#include "bump_block.h"
 
 #include <iostream>
 #include <fstream>
@@ -203,6 +204,7 @@ void Level::Update(float dt, Player& player, ParticleSystem* particles) {
     // Expose solid colliders for autonomous enemy navigation
     std::vector<AABB> levelSolids = GetSolidColliders();
     Walker::setLevelColliders(&levelSolids);
+    BumpBlock::setParticleSystem(particles);
 
     // Polymorphic update loop across all entities (no type switches!)
     for (const auto& entity : m_entities) {

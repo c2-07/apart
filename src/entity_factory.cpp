@@ -11,6 +11,7 @@
 #include "door.h"
 #include "walker.h"
 #include "flyer.h"
+#include "bump_block.h"
 #include "constants.h"
 #include "level_error.h"
 #include <algorithm>
@@ -110,6 +111,20 @@ std::unique_ptr<Entity> EntityFactory::createEntity(const std::string& type, std
             return std::make_unique<Flyer>(Vec3{ args[0], args[1], args[2] }, args[3], args[4], Constants::FLYER_SPEED, args[5]);
         }
         throw LevelParseError("Invalid flyer entity parameters");
+    } else if (type == "bump") {
+        std::vector<float> args;
+        float val;
+        while (ss >> val) args.push_back(val);
+        if (args.size() == 2) {
+            return std::make_unique<BumpBlock>(Vec3{ args[0], args[1], 0.0f }, 1, worldId);
+        } else if (args.size() == 3) {
+            return std::make_unique<BumpBlock>(Vec3{ args[0], args[1], 0.0f }, static_cast<int>(args[2]), worldId);
+        } else if (args.size() == 4) {
+            return std::make_unique<BumpBlock>(Vec3{ args[0], args[1], args[2] }, static_cast<int>(args[3]), worldId);
+        } else if (args.size() >= 5) {
+            return std::make_unique<BumpBlock>(Vec3{ args[0], args[1], args[2] }, static_cast<int>(args[3]), static_cast<int>(args[4]));
+        }
+        throw LevelParseError("Invalid bump entity parameters");
     }
     return nullptr;
 }

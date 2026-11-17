@@ -19,6 +19,7 @@ namespace UI {
     void DrawHUD(const std::string& levelName, float timer, float parTime,
                  int checkpoints, int totalCheckpoints, int deaths,
                  int hearts = 3, int maxHearts = 3, float heartShake = 0.0f,
+                 int coins = 0,
                  float hintAlpha = 1.0f, float titleAlpha = 0.0f);
     void DrawVolumeControl(int posX, int posY, float width = 150.0f);
 

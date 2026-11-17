@@ -200,6 +200,7 @@ void PlayState::draw() const {
     UI::DrawHUD(m_game.level.name, m_game.level.elapsedTime, m_game.level.parTime,
                 static_cast<int>(std::round(m_game.displayedCheckpoints)), m_game.level.GetTotalCheckpointCount(), m_game.level.deaths,
                 m_game.player.getHearts(), m_game.player.getMaxHearts(), m_heartShakeTimer,
+                m_game.player.getCoins(),
                 hintAlpha, titleAlpha);
 
     // Context hint banner

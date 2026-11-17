@@ -116,4 +116,10 @@ namespace Constants {
     constexpr float FLYER_WIDTH = 0.9f;
     constexpr float FLYER_HEIGHT = 0.7f;
     constexpr float FLYER_DEFAULT_RANGE = 5.0f;
+
+    // Bump Block Gameplay System (2D Pass Step 3)
+    constexpr float BUMP_BLOCK_BOUNCE_TIME = 0.15f;
+    constexpr float BUMP_BLOCK_BOUNCE_HEIGHT = 0.20f;
+    constexpr float COIN_POP_DURATION = 0.40f;
+    constexpr float COIN_POP_HEIGHT = 0.80f;
 }

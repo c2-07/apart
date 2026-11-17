@@ -46,6 +46,9 @@ private:
     int m_hearts;
     float m_invincibleTimer;
 
+    // Coins collected
+    int m_coins;
+
     PlayerAnimator m_animator;
 
 public:
@@ -55,6 +58,11 @@ public:
     void respawn();
     void jump();
     void applyImpulse(const Vec3& impulse);
+
+    // Coins interface
+    int getCoins() const { return m_coins; }
+    void addCoins(int amount = 1) { m_coins += amount; }
+    void setCoins(int amount) { m_coins = amount; }
 
     // Health & Damage interface
     void takeDamage(const Vector2& knockbackDirection);

@@ -23,11 +23,13 @@ Player::Player()
       m_maxHearts(Constants::MAX_HEARTS),
       m_hearts(Constants::MAX_HEARTS),
       m_invincibleTimer(0.0f),
+      m_coins(0),
       m_animator() {}
 
 void Player::init(const Vec3& spawn) {
     m_spawnPoint = spawn;
     m_deathCount = 0;
+    m_coins = 0;
     m_colorIndex = 0;
     m_wasGrounded = false;
     m_animator.reset();

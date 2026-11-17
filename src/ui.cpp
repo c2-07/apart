@@ -103,6 +103,7 @@ void DrawVolumeControl(int posX, int posY, float width) {
 void DrawHUD(const std::string& levelName, float timer, float parTime,
              int checkpoints, int totalCheckpoints, int deaths,
              int hearts, int maxHearts, float heartShake,
+             int coins,
              float hintAlpha, float titleAlpha) {
     // 1. Polished HUD Panel with Drop Shadow & Consistent Padding
     Rectangle hudPanel = { 20, 20, 360, 118 };
@@ -171,11 +172,19 @@ void DrawHUD(const std::string& levelName, float timer, float parTime,
     DrawText(cpBuf, (int)padX, (int)curY, 16, cpColor);
     curY += 22.0f;
 
-    // Deaths Counter
+    // Deaths & Coins Counter
     char deathBuf[32];
     snprintf(deathBuf, sizeof(deathBuf), "Deaths: %d", deaths);
     Color deathColor = (deaths == 0) ? Color{ 145, 230, 155, 255 } : Color{ 245, 110, 100, 255 };
     DrawText(deathBuf, (int)padX, (int)curY, 16, deathColor);
+
+    // Coins Counter with Gold Coin Icon
+    float coinX = padX + 150.0f;
+    DrawCircle((int)coinX + 6, (int)curY + 8, 7, Color{ 255, 215, 30, 255 });
+    DrawCircleLines((int)coinX + 6, (int)curY + 8, 7, Color{ 190, 150, 10, 255 });
+    char coinBuf[32];
+    snprintf(coinBuf, sizeof(coinBuf), "Coins: %d", coins);
+    DrawText(coinBuf, (int)coinX + 18, (int)curY, 16, Color{ 255, 230, 80, 255 });
 
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
