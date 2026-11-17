@@ -9,6 +9,9 @@
 #include "finish_zone.h"
 #include "button.h"
 #include "door.h"
+#include "walker.h"
+#include "flyer.h"
+#include "constants.h"
 #include "level_error.h"
 #include <algorithm>
 
@@ -81,6 +84,32 @@ std::unique_ptr<Entity> EntityFactory::createEntity(const std::string& type, std
             return std::make_unique<Door>(dId, Vec3{ x, y, z }, Vec3{ sx, sy, sz });
         }
         throw LevelParseError("Invalid door entity parameters");
+    } else if (type == "walker") {
+        std::vector<float> args;
+        float val;
+        while (ss >> val) args.push_back(val);
+        if (args.size() == 2) {
+            return std::make_unique<Walker>(Vec3{ args[0], args[1], 0.0f }, 0.0f);
+        } else if (args.size() == 3) {
+            return std::make_unique<Walker>(Vec3{ args[0], args[1], 0.0f }, args[2]);
+        } else if (args.size() == 4) {
+            return std::make_unique<Walker>(Vec3{ args[0], args[1], args[2] }, args[3]);
+        } else if (args.size() >= 5) {
+            return std::make_unique<Walker>(Vec3{ args[0], args[1], args[2] }, args[3], args[4]);
+        }
+        throw LevelParseError("Invalid walker entity parameters");
+    } else if (type == "flyer") {
+        std::vector<float> args;
+        float val;
+        while (ss >> val) args.push_back(val);
+        if (args.size() == 4) {
+            return std::make_unique<Flyer>(Vec3{ args[0], args[1], 0.0f }, args[2], args[3]);
+        } else if (args.size() == 5) {
+            return std::make_unique<Flyer>(Vec3{ args[0], args[1], args[2] }, args[3], args[4]);
+        } else if (args.size() >= 6) {
+            return std::make_unique<Flyer>(Vec3{ args[0], args[1], args[2] }, args[3], args[4], Constants::FLYER_SPEED, args[5]);
+        }
+        throw LevelParseError("Invalid flyer entity parameters");
     }
     return nullptr;
 }

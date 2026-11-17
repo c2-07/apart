@@ -7,6 +7,7 @@
 #include "render_utils.h"
 #include "raymath.h"
 #include "rlgl.h"
+#include "walker.h"
 
 #include <iostream>
 #include <fstream>
@@ -199,10 +200,22 @@ void Level::Update(float dt, Player& player, ParticleSystem* particles) {
         btn->setGhostTouching(ghostTouching);
     }
 
+    // Expose solid colliders for autonomous enemy navigation
+    std::vector<AABB> levelSolids = GetSolidColliders();
+    Walker::setLevelColliders(&levelSolids);
+
     // Polymorphic update loop across all entities (no type switches!)
     for (const auto& entity : m_entities) {
         entity->update(dt, player);
     }
+
+    // Safe deferred removal of inactive/defeated entities via std::remove_if
+    m_entities.erase(
+        std::remove_if(m_entities.begin(), m_entities.end(),
+            [](const std::unique_ptr<Entity>& e) {
+                return e->isExpired();
+            }),
+        m_entities.end());
 
     // Synchronize doors with active buttons
     for (auto* dr : m_doors) {

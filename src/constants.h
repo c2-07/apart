@@ -105,4 +105,15 @@ namespace Constants {
     constexpr float KNOCKBACK_HOP = 5.0f;
     constexpr float HEART_SHAKE_DURATION = 0.35f;
     constexpr float BLINK_INTERVAL = 0.10f;
+
+    // Enemy Gameplay System (2D Pass Step 2)
+    constexpr float WALKER_SPEED = 2.0f;
+    constexpr float FLYER_SPEED = 2.5f;
+    constexpr float STOMP_BOUNCE = 9.0f;
+    constexpr float ENEMY_FLATTEN_TIME = 0.20f;
+    constexpr float WALKER_WIDTH = 0.9f;
+    constexpr float WALKER_HEIGHT = 0.8f;
+    constexpr float FLYER_WIDTH = 0.9f;
+    constexpr float FLYER_HEIGHT = 0.7f;
+    constexpr float FLYER_DEFAULT_RANGE = 5.0f;
 }

@@ -36,6 +36,9 @@ add_executable(obby
     src/finish_zone.cpp
     src/button.cpp
     src/door.cpp
+    src/enemy.cpp
+    src/walker.cpp
+    src/flyer.cpp
     src/ghost_recorder.cpp
     src/camera_controller.cpp
     src/player_animator.cpp

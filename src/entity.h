@@ -55,6 +55,7 @@ public:
     virtual void onPlayerTouch(Player& player) override;
     virtual AABB getBounds() const;
     virtual bool isSolid() const;
+    virtual bool isExpired() const { return false; }
 };
 
 } // namespace obby

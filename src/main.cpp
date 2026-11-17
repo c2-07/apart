@@ -13,6 +13,8 @@
 #include "rlgl.h"
 #include "spikes.h"
 #include "checkpoint.h"
+#include "walker.h"
+#include "flyer.h"
 
 #include <iostream>
 #include <vector>
@@ -341,6 +343,113 @@ static int RunSmokeTest() {
         assert(p.getDeathCount() == prevDeaths + 1);
         assert(p.getHearts() == Constants::MAX_HEARTS);
         std::cout << "[SMOKE-TEST] Hearts & Health System verified successfully!" << std::endl;
+    }
+
+    // 13. 2D Pass Step 2: Enemy Hierarchy, Walker, Flyer, and Stomp Logic Verification
+    {
+        std::cout << "[SMOKE-TEST] Testing Enemy Hierarchy (Walker & Flyer)..." << std::endl;
+
+        // 1. Walker turns at a wall
+        {
+            std::vector<AABB> levelSolids;
+            levelSolids.push_back(AABB{ Vector3{ -5.0f, 0.0f, -2.0f }, Vector3{ 5.0f, 1.0f, 2.0f } });
+            levelSolids.push_back(AABB{ Vector3{ 2.0f, 1.0f, -2.0f }, Vector3{ 3.0f, 4.0f, 2.0f } });
+            Walker::setLevelColliders(&levelSolids);
+
+            Walker walker(Vec3{ 1.4f, 1.4f, 0.0f });
+            assert(walker.getFacingDirection() == 1);
+            walker.think(0.1f);
+            assert(walker.getFacingDirection() == -1);
+        }
+
+        // 2. Walker turns at a ledge
+        {
+            std::vector<AABB> levelSolids;
+            levelSolids.push_back(AABB{ Vector3{ 0.0f, 0.0f, -2.0f }, Vector3{ 2.0f, 1.0f, 2.0f } });
+            Walker::setLevelColliders(&levelSolids);
+
+            Walker walker(Vec3{ 1.6f, 1.4f, 0.0f });
+            assert(walker.getFacingDirection() == 1);
+            walker.think(0.016f);
+            assert(walker.getFacingDirection() == -1);
+        }
+
+        // 3. Walker turns at patrol range
+        {
+            Walker::setLevelColliders(nullptr);
+            Walker walker(Vec3{ 0.0f, 1.0f, 0.0f }, 1.0f);
+            assert(walker.getFacingDirection() == 1);
+            for (int i = 0; i < 70; ++i) {
+                walker.think(0.016f);
+            }
+            assert(walker.getFacingDirection() == -1);
+        }
+
+        // 4. Stomping defeats enemy and bounces the player upward
+        {
+            Player player;
+            player.init(Vec3{ 0.0f, 0.0f, 0.0f });
+            Walker walker(Vec3{ 0.0f, 0.4f, 0.0f });
+
+            player.setPosition(Vec3{ 0.0f, 0.5f, 0.0f });
+            player.setVelocity(Vec3{ 0.0f, -4.0f, 0.0f });
+
+            walker.update(0.016f, player);
+            assert(!walker.isAlive());
+            assert(walker.isFlattened());
+            assert(player.getVelocity().y == Constants::STOMP_BOUNCE);
+            assert(player.getHearts() == Constants::MAX_HEARTS);
+            assert(!walker.getBounds().intersects(player.getBounds()));
+        }
+
+        // 5. Side contact damages the player
+        {
+            Player player;
+            player.init(Vec3{ 0.0f, 0.0f, 0.0f });
+            Walker walker(Vec3{ 0.0f, 0.4f, 0.0f });
+
+            player.setPosition(Vec3{ 0.4f, 0.0f, 0.0f });
+            player.setVelocity(Vec3{ 0.0f, 0.0f, 0.0f });
+
+            walker.update(0.016f, player);
+            assert(walker.isAlive());
+            assert(player.getHearts() == Constants::MAX_HEARTS - 1);
+            assert(player.isInvincible());
+        }
+
+        // 6. Safe deferred removal via std::remove_if
+        {
+            std::vector<std::unique_ptr<Entity>> testEntities;
+            testEntities.push_back(std::make_unique<Walker>(Vec3{ 0.0f, 0.0f, 0.0f }));
+            testEntities.push_back(std::make_unique<Flyer>(Vec3{ 5.0f, 3.0f, 0.0f }));
+
+            Player player;
+            player.init(Vec3{ 0.0f, 10.0f, 0.0f });
+
+            assert(testEntities.size() == 2);
+            assert(!testEntities[0]->isExpired());
+            assert(!testEntities[1]->isExpired());
+
+            player.setPosition(Vec3{ 0.0f, 0.2f, 0.0f });
+            player.setVelocity(Vec3{ 0.0f, -5.0f, 0.0f });
+            testEntities[0]->update(0.016f, player);
+            assert(!testEntities[0]->isExpired());
+
+            for (int i = 0; i < 20; ++i) {
+                testEntities[0]->update(0.016f, player);
+            }
+            assert(testEntities[0]->isExpired());
+
+            testEntities.erase(
+                std::remove_if(testEntities.begin(), testEntities.end(),
+                    [](const std::unique_ptr<Entity>& e) { return e->isExpired(); }),
+                testEntities.end());
+
+            assert(testEntities.size() == 1);
+            assert(testEntities[0]->getTypeName() == std::string("flyer"));
+        }
+
+        std::cout << "[SMOKE-TEST] Enemy Hierarchy verified successfully!" << std::endl;
     }
 
     std::cout << "[SMOKE-TEST] ALL MILESTONES (M1 through M8) VERIFIED AND PASSED!" << std::endl;
