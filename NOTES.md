@@ -326,12 +326,19 @@ cmake --build build
   - Refactored `Game` context class to own `std::unique_ptr<GameState> m_currentState`, eliminating monolithic switch statements from the core loop and managing transitions via deferred state requests.
 
 #### Step 6: RAII Resource Holders, ObjectPool Template & ISaveable Interface
-- **Status:** COMPLETED
+- **Status:** COMPLETED (Commit: `40621ce`)
 - **Details:**
   - Implemented `ShaderHolder` (`src/shader_holder.h/.cpp`): RAII resource wrapper encapsulating raylib `Shader` loading, uniform caching, and destruction via `UnloadShader()`. Enforces Rule of 5 with deleted copy operations and custom move semantics.
   - Implemented `SoundBank` (`src/sound_bank.h/.cpp`): RAII audio bank holding `std::unordered_map<std::string, Sound>`, managing automatic audio device lifecycle and sound buffer unloading upon destruction.
   - Implemented class template `ObjectPool<T>` (`src/object_pool.h`): generic high-performance object pool with dynamic resizing, pre-allocation, and O(1) swap-and-pop slot reclamation. Integrated with `ParticleSystem` (`src/particle.h/.cpp`) to eliminate heap allocation during gameplay.
   - Implemented pure virtual interface `ISaveable` (`src/saveable.h`) with `save()` and `load()` methods, realized by `SaveData`.
+
+#### Step 7: Documentation, Viva Defense Guide & UML Architecture Diagram (`OOP_CONCEPTS.md`)
+- **Status:** COMPLETED
+- **Details:**
+  - Authored comprehensive `OOP_CONCEPTS.md` mapping all 17 required OOP concepts (Encapsulation, Abstraction, Inheritance, Multi-level Inheritance, Multiple Interface Inheritance, Polymorphism / Virtual Functions, Pure Virtual Functions / Abstract Classes, Operator Overloading, Member Initializer Lists, Virtual Destructors, RAII, Class Templates, Exception Handling, Static Members, Interfaces, Namespaces, STL containers) to exact files and classes with viva defense rationales.
+  - Generated complete Mermaid UML class diagrams representing the `Entity` hierarchy, the `GameState` State Pattern, and the Core Engine Component Ownership.
+  - Provided a college viva voce defense Q&A covering design tradeoffs, virtual method table mechanics, object slicing prevention, and memory management.
 
 
 
