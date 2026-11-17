@@ -1,16 +1,13 @@
 # World 1 - Level 1: Meadow Steps
-# Introductory course teaching jumping, distance estimation, and checkpoint progression.
-
 name Meadow Steps
 world 1
 killY -15.0
 par 35.0
 
-# Spawn
 spawn 0 1 0
 box 0 -0.5 0 8 1 8 0
 
-# Section 1: Forward steps
+# Forward steps
 box 0 0 -6 3 1 3 1
 box 0 0.5 -11 3 1 3 0
 box 2 1.0 -16 3 1 3 2
@@ -23,7 +20,7 @@ box 0 3.0 -36 3 1 3 1
 box 0 3.0 -42 6 1 6 0
 checkpoint 0 3.5 -42
 
-# Section 2: Turning curve
+# Curve right
 box 6 3.5 -42 3 1 3 1
 box 11 4.0 -42 3 1 3 2
 box 16 4.5 -40 3 1 3 0
@@ -37,7 +34,7 @@ box 41 7.0 -42 3 1 3 2
 box 47 7.0 -42 6 1 6 0
 checkpoint 47 7.5 -42
 
-# Section 3: Final ascent to finish
+# Final climb
 box 47 7.5 -48 3 1 3 1
 box 47 8.0 -53 3 1 3 2
 box 45 8.5 -58 3 1 3 0
@@ -48,6 +45,5 @@ box 47 10.5 -78 3 1 3 1
 box 47 11.0 -83 3 1 3 2
 box 47 11.5 -88 4 1 4 0
 
-# Finish Zone
 box 47 12.0 -96 8 1 8 3
 finish 47 13.5 -96 4 3 4

@@ -1,0 +1,35 @@
+# World 2 - Level 1: Tidal Planks
+name Tidal Planks
+world 2
+killY -15.0
+par 38.0
+
+spawn 0 1 0
+box 0 -0.5 0 8 1 8 0
+
+# Static stepping block
+box 0 0 -6 3 1 3 1
+
+# First Mover: moves along X by 6 meters
+mover 0 0 -12 4 1 4 6 0 0 3.5 0
+box 6 0.5 -18 4 1 4 2
+
+# Checkpoint 1
+box 6 0.5 -24 6 1 6 0
+checkpoint 6 1.0 -24
+
+# Second Mover: moves along Z by 6 meters
+mover 6 0.5 -30 4 1 4 0 0 -6 3.5 1
+box 6 1.0 -41 4 1 4 2
+
+# Checkpoint 2
+box 6 1.0 -47 6 1 6 0
+checkpoint 6 1.5 -47
+
+# Third Mover: diagonal motion
+mover 6 1.0 -53 4 1 4 -6 0 -5 4.0 0
+box -2 1.5 -63 4 1 4 2
+
+# Finish
+box -2 1.5 -71 8 1 8 3
+finish -2 3.0 -71 4 3 4

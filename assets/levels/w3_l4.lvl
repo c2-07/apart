@@ -1,0 +1,36 @@
+# World 3 - Level 4: Glacial Gauntlet
+name Glacial Gauntlet
+world 3
+killY -15.0
+par 44.0
+
+spawn 0 1 0
+box 0 -0.5 0 8 1 8 0
+
+box 0 0 -6 6 1 6 2
+spinner 0 0.8 -6 5.5 0.4 3.0
+crumble 0 0.5 -12 3 1 3 0.8 2.0
+crumble 0 1.0 -17 3 1 3 0.8 2.0
+box 0 1.5 -23 6 1 6 1
+spinner 0 2.3 -23 5.5 0.4 -3.0
+
+# Checkpoint 1
+box 0 2.0 -31 6 1 6 0
+checkpoint 0 2.5 -31
+
+box 4 2.5 -36 3 1 3 1
+crumble 8 3.0 -40 3 1 3 0.7 2.0
+box 12 3.5 -45 6 1 6 0
+spinner 12 4.3 -45 5.5 0.4 3.2
+box 16 4.0 -51 4 1 4 2
+
+# Checkpoint 2
+box 16 4.0 -58 6 1 6 0
+checkpoint 16 4.5 -58
+
+crumble 16 4.5 -64 3 1 3 0.7 2.0
+crumble 14 5.0 -69 3 1 3 0.7 2.0
+box 11 5.5 -74 4 1 4 1
+
+box 11 6.0 -82 8 1 8 3
+finish 11 7.5 -82 4 3 4
