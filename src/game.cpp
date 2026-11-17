@@ -58,7 +58,7 @@ void SaveData::InitDefaults() {
     levels.assign(20, LevelProgress{ 0.0f, 0 });
 }
 
-bool SaveData::Load(const std::string& path) {
+bool SaveData::load(const std::string& path) {
     InitDefaults();
     std::ifstream file(path);
     if (!file.is_open()) return false;
@@ -90,7 +90,7 @@ bool SaveData::Load(const std::string& path) {
     return true;
 }
 
-bool SaveData::Save(const std::string& path) const {
+bool SaveData::save(const std::string& path) const {
     std::ofstream file(path);
     if (!file.is_open()) {
         std::cerr << "[SaveData] Failed to write savegame to " << path << std::endl;
@@ -131,14 +131,8 @@ Game::Game()
       showFps(false),
       previousDeaths(0),
       accumulator(0.0f),
-      lightingShader(Shader{ 0, nullptr }),
-      shaderLoaded(false),
-      lightDirLoc(-1),
-      lightColorLoc(-1),
-      ambientColorLoc(-1),
-      viewPosLoc(-1),
-      fogColorLoc(-1),
-      fogDensityLoc(-1) {}
+      lightingShader(),
+      shaderLoaded(false) {}
 
 void Game::Init() {
     save.Load();
@@ -147,31 +141,10 @@ void Game::Init() {
     player.setColorIndex(save.chosenColor);
     LoadLevelByIndex(0);
 
-    // Load custom lighting shader if graphical window is ready
+    // Load custom lighting shader via RAII holder if graphical window is ready
     if (IsWindowReady()) {
-        lightingShader = LoadShader("assets/shaders/lighting.vs", "assets/shaders/lighting.fs");
-        if (lightingShader.id > 0) {
-            shaderLoaded = true;
-
-            // Uniform locations
-            lightDirLoc = GetShaderLocation(lightingShader, "lightDir");
-            lightColorLoc = GetShaderLocation(lightingShader, "lightColor");
-            ambientColorLoc = GetShaderLocation(lightingShader, "ambientColor");
-            viewPosLoc = GetShaderLocation(lightingShader, "viewPos");
-            fogColorLoc = GetShaderLocation(lightingShader, "fogColor");
-            fogDensityLoc = GetShaderLocation(lightingShader, "fogDensity");
-
-            // Directional sun light uniforms
-            float lDir[3] = { Constants::LIGHT_DIR_X, Constants::LIGHT_DIR_Y, Constants::LIGHT_DIR_Z };
-            float lCol[4] = { Constants::SUN_LIGHT_INTENSITY, Constants::SUN_LIGHT_INTENSITY, Constants::SUN_LIGHT_INTENSITY, 1.0f };
-            float ambCol[4] = { Constants::AMBIENT_LIGHT_INTENSITY, Constants::AMBIENT_LIGHT_INTENSITY, Constants::AMBIENT_LIGHT_INTENSITY, 1.0f };
-            float fogDens = Constants::DEFAULT_FOG_DENSITY;
-
-            SetShaderValue(lightingShader, lightDirLoc, lDir, SHADER_UNIFORM_VEC3);
-            SetShaderValue(lightingShader, lightColorLoc, lCol, SHADER_UNIFORM_VEC4);
-            SetShaderValue(lightingShader, ambientColorLoc, ambCol, SHADER_UNIFORM_VEC4);
-            SetShaderValue(lightingShader, fogDensityLoc, &fogDens, SHADER_UNIFORM_FLOAT);
-        }
+        lightingShader = ShaderHolder("assets/shaders/lighting.vs", "assets/shaders/lighting.fs");
+        shaderLoaded = lightingShader.isLoaded();
     }
 
     // Set initial polymorphic state
@@ -179,47 +152,14 @@ void Game::Init() {
 }
 
 void Game::Shutdown() {
-    if (shaderLoaded) {
-        UnloadShader(lightingShader);
-        shaderLoaded = false;
-    }
-
+    // RAII cleans up shader and audio automatically
     save.chosenColor = player.getColorIndex();
     save.volume = AudioManager::GetVolume();
     save.Save();
 }
 
 void Game::ApplyLightingShader(Vector3 eyePos, int worldId) const {
-    if (!shaderLoaded) return;
-    WorldPalette pal = GetWorldPalette(worldId);
-
-    float lCol[4] = {
-        pal.lightColor.r / 255.0f,
-        pal.lightColor.g / 255.0f,
-        pal.lightColor.b / 255.0f,
-        1.0f
-    };
-    float aCol[4] = {
-        pal.ambientColor.r / 255.0f,
-        pal.ambientColor.g / 255.0f,
-        pal.ambientColor.b / 255.0f,
-        1.0f
-    };
-    float camPos[3] = { eyePos.x, eyePos.y, eyePos.z };
-    float horizonCol[4] = {
-        pal.fogColor.r / 255.0f,
-        pal.fogColor.g / 255.0f,
-        pal.fogColor.b / 255.0f,
-        1.0f
-    };
-
-    SetShaderValue(lightingShader, lightColorLoc, lCol, SHADER_UNIFORM_VEC4);
-    SetShaderValue(lightingShader, ambientColorLoc, aCol, SHADER_UNIFORM_VEC4);
-    SetShaderValue(lightingShader, viewPosLoc, camPos, SHADER_UNIFORM_VEC3);
-    SetShaderValue(lightingShader, fogColorLoc, horizonCol, SHADER_UNIFORM_VEC4);
-    SetShaderValue(lightingShader, fogDensityLoc, &pal.fogDensity, SHADER_UNIFORM_FLOAT);
-
-    BeginShaderMode(lightingShader);
+    lightingShader.applyLighting(eyePos, worldId);
 }
 
 void Game::LoadLevelByIndex(int index) {

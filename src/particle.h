@@ -1,6 +1,6 @@
 #pragma once
 #include "raylib.h"
-#include <vector>
+#include "object_pool.h"
 
 struct Particle {
     Vector3 position;
@@ -23,6 +23,8 @@ public:
     void Draw() const;
     void Clear();
 
+    size_t GetActiveCount() const { return m_pool.activeCount(); }
+
 private:
-    std::vector<Particle> particles;
+    ObjectPool<Particle> m_pool;
 };

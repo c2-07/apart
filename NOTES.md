@@ -312,7 +312,7 @@ cmake --build build
   - Updated all entity interactions and test assertions to use clean accessor and mutator methods. Passed all headless smoke tests and level reachability suites.
 
 #### Step 5: GameState Polymorphism & State Pattern Architecture
-- **Status:** COMPLETED
+- **Status:** COMPLETED (Commit: `6ba4b35`)
 - **Details:**
   - Implemented abstract base class `GameState` (`src/game_state.h`) with pure virtual `handleInput()`, `update(float dt)`, `draw() const`, and virtual lifecycle hooks `enter()` and `exit()`.
   - Created 7 derived concrete state classes, each in its own header and source file:
@@ -324,6 +324,14 @@ cmake --build build
     - `PauseState`: Modal dialog for resume, restart, settings, and quit options.
     - `ResultsState`: Victory screen displaying time, deaths, and star evaluation.
   - Refactored `Game` context class to own `std::unique_ptr<GameState> m_currentState`, eliminating monolithic switch statements from the core loop and managing transitions via deferred state requests.
+
+#### Step 6: RAII Resource Holders, ObjectPool Template & ISaveable Interface
+- **Status:** COMPLETED
+- **Details:**
+  - Implemented `ShaderHolder` (`src/shader_holder.h/.cpp`): RAII resource wrapper encapsulating raylib `Shader` loading, uniform caching, and destruction via `UnloadShader()`. Enforces Rule of 5 with deleted copy operations and custom move semantics.
+  - Implemented `SoundBank` (`src/sound_bank.h/.cpp`): RAII audio bank holding `std::unordered_map<std::string, Sound>`, managing automatic audio device lifecycle and sound buffer unloading upon destruction.
+  - Implemented class template `ObjectPool<T>` (`src/object_pool.h`): generic high-performance object pool with dynamic resizing, pre-allocation, and O(1) swap-and-pop slot reclamation. Integrated with `ParticleSystem` (`src/particle.h/.cpp`) to eliminate heap allocation during gameplay.
+  - Implemented pure virtual interface `ISaveable` (`src/saveable.h`) with `save()` and `load()` methods, realized by `SaveData`.
 
 
 

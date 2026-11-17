@@ -10,10 +10,8 @@
 #include "particle.h"
 #include "validator.h"
 #include "game_state.h"
-
-#include <string>
-#include <vector>
-#include <memory>
+#include "shader_holder.h"
+#include "saveable.h"
 
 enum class AppState {
     MAIN_MENU,
@@ -30,7 +28,7 @@ struct LevelProgress {
     int stars = 0;
 };
 
-struct SaveData {
+struct SaveData : public ISaveable {
     int chosenColor = 0;
     float volume = 0.8f;
     float sensitivity = 0.18f;
@@ -39,9 +37,14 @@ struct SaveData {
     int unlockedWorlds = 1;
     std::vector<LevelProgress> levels; // 20 entries
 
+    virtual ~SaveData() override = default;
+
     void InitDefaults();
-    bool Load(const std::string& path = "savegame.txt");
-    bool Save(const std::string& path = "savegame.txt") const;
+    virtual bool load(const std::string& path = "savegame.txt") override;
+    virtual bool save(const std::string& path = "savegame.txt") const override;
+
+    bool Load(const std::string& path = "savegame.txt") { return load(path); }
+    bool Save(const std::string& path = "savegame.txt") const { return save(path); }
 };
 
 namespace obby {
@@ -72,15 +75,9 @@ public:
     int previousDeaths;
     float accumulator;
 
-    // Visual Pass Shaders
-    Shader lightingShader;
+    // Visual Pass Shader (RAII Resource Holder)
+    ShaderHolder lightingShader;
     bool shaderLoaded;
-    int lightDirLoc;
-    int lightColorLoc;
-    int ambientColorLoc;
-    int viewPosLoc;
-    int fogColorLoc;
-    int fogDensityLoc;
 
     Game();
     ~Game() = default;

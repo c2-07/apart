@@ -46,6 +46,8 @@ add_executable(obby
     src/play_state.cpp
     src/pause_state.cpp
     src/results_state.cpp
+    src/shader_holder.cpp
+    src/sound_bank.cpp
     src/game.cpp
     src/collision.cpp
     src/camera.cpp

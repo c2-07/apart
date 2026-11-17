@@ -9,31 +9,30 @@ static float RandRange(float minVal, float maxVal) {
     return minVal + r * (maxVal - minVal);
 }
 
-ParticleSystem::ParticleSystem() {
-    particles.reserve(64);
-}
+ParticleSystem::ParticleSystem()
+    : m_pool(256) {}
 
 void ParticleSystem::SpawnJumpPuff(Vector3 feetPos) {
     constexpr int count = 8;
     for (int i = 0; i < count; ++i) {
         float angle = (2.0f * PI * i) / count + RandRange(0.0f, 0.4f);
         float speed = RandRange(1.8f, 3.0f);
-        Particle p;
-        p.position = Vector3{
+        Particle* p = m_pool.acquire();
+        if (!p) continue;
+        p->position = Vector3{
             feetPos.x + cosf(angle) * 0.2f,
             feetPos.y + 0.1f,
             feetPos.z + sinf(angle) * 0.2f
         };
-        p.velocity = Vector3{
+        p->velocity = Vector3{
             cosf(angle) * speed,
             RandRange(1.2f, 2.0f),
             sinf(angle) * speed
         };
-        p.size = RandRange(0.18f, 0.26f);
-        p.maxLife = RandRange(0.35f, 0.50f);
-        p.life = p.maxLife;
-        p.color = Color{ 230, 240, 255, 230 };
-        particles.push_back(p);
+        p->size = RandRange(0.18f, 0.26f);
+        p->maxLife = RandRange(0.35f, 0.50f);
+        p->life = p->maxLife;
+        p->color = Color{ 230, 240, 255, 230 };
     }
 }
 
@@ -42,22 +41,22 @@ void ParticleSystem::SpawnLandPuff(Vector3 feetPos, float impactSpeed) {
     for (int i = 0; i < count; ++i) {
         float angle = (2.0f * PI * i) / count + RandRange(0.0f, 0.3f);
         float speed = 2.0f + (impactSpeed * 0.15f) + RandRange(0.0f, 1.5f);
-        Particle p;
-        p.position = Vector3{
+        Particle* p = m_pool.acquire();
+        if (!p) continue;
+        p->position = Vector3{
             feetPos.x + cosf(angle) * 0.3f,
             feetPos.y + 0.05f,
             feetPos.z + sinf(angle) * 0.3f
         };
-        p.velocity = Vector3{
+        p->velocity = Vector3{
             cosf(angle) * speed,
             RandRange(0.8f, 1.8f),
             sinf(angle) * speed
         };
-        p.size = RandRange(0.22f, 0.32f);
-        p.maxLife = RandRange(0.4f, 0.6f);
-        p.life = p.maxLife;
-        p.color = Color{ 220, 230, 245, 240 };
-        particles.push_back(p);
+        p->size = RandRange(0.22f, 0.32f);
+        p->maxLife = RandRange(0.4f, 0.6f);
+        p->life = p->maxLife;
+        p->color = Color{ 220, 230, 245, 240 };
     }
 }
 
@@ -66,22 +65,22 @@ void ParticleSystem::SpawnSkidPuff(Vector3 feetPos, Vector3 horizVel) {
     Vector3 oppDir = Vector3Normalize(Vector3{ -horizVel.x, 0.0f, -horizVel.z });
     for (int i = 0; i < count; ++i) {
         float speed = RandRange(1.2f, 2.8f);
-        Particle p;
-        p.position = Vector3{
+        Particle* p = m_pool.acquire();
+        if (!p) continue;
+        p->position = Vector3{
             feetPos.x + RandRange(-0.2f, 0.2f),
             feetPos.y + 0.05f,
             feetPos.z + RandRange(-0.2f, 0.2f)
         };
-        p.velocity = Vector3{
+        p->velocity = Vector3{
             oppDir.x * speed + RandRange(-0.5f, 0.5f),
             RandRange(0.6f, 1.4f),
             oppDir.z * speed + RandRange(-0.5f, 0.5f)
         };
-        p.size = RandRange(0.14f, 0.22f);
-        p.maxLife = RandRange(0.25f, 0.40f);
-        p.life = p.maxLife;
-        p.color = Color{ 225, 235, 245, 200 };
-        particles.push_back(p);
+        p->size = RandRange(0.14f, 0.22f);
+        p->maxLife = RandRange(0.25f, 0.40f);
+        p->life = p->maxLife;
+        p->color = Color{ 225, 235, 245, 200 };
     }
 }
 
@@ -95,22 +94,22 @@ void ParticleSystem::SpawnCheckpointBurst(Vector3 padPos) {
     for (int i = 0; i < count; ++i) {
         float angle = (2.0f * PI * i) / count + RandRange(-0.2f, 0.2f);
         float speed = RandRange(2.5f, 5.0f);
-        Particle p;
-        p.position = Vector3{
+        Particle* p = m_pool.acquire();
+        if (!p) continue;
+        p->position = Vector3{
             padPos.x + cosf(angle) * 0.4f,
             padPos.y + 0.15f,
             padPos.z + sinf(angle) * 0.4f
         };
-        p.velocity = Vector3{
+        p->velocity = Vector3{
             cosf(angle) * speed,
             RandRange(3.5f, 6.5f),
             sinf(angle) * speed
         };
-        p.size = RandRange(0.16f, 0.26f);
-        p.maxLife = RandRange(0.6f, 0.95f);
-        p.life = p.maxLife;
-        p.color = colors[i % 3];
-        particles.push_back(p);
+        p->size = RandRange(0.16f, 0.26f);
+        p->maxLife = RandRange(0.6f, 0.95f);
+        p->life = p->maxLife;
+        p->color = colors[i % 3];
     }
 }
 
@@ -127,32 +126,31 @@ void ParticleSystem::SpawnConfettiBurst(Vector3 center) {
         float angle = RandRange(0.0f, 2.0f * PI);
         float pitch = RandRange(-0.3f, 1.2f);
         float speed = RandRange(3.0f, 8.0f);
-        Particle p;
-        p.position = Vector3{
+        Particle* p = m_pool.acquire();
+        if (!p) continue;
+        p->position = Vector3{
             center.x + RandRange(-0.5f, 0.5f),
             center.y + RandRange(0.5f, 2.5f),
             center.z + RandRange(-0.5f, 0.5f)
         };
-        p.velocity = Vector3{
+        p->velocity = Vector3{
             cosf(angle) * cosf(pitch) * speed,
             sinf(pitch) * speed + 3.0f,
             sinf(angle) * cosf(pitch) * speed
         };
-        p.size = RandRange(0.18f, 0.32f);
-        p.maxLife = RandRange(1.2f, 1.8f);
-        p.life = p.maxLife;
-        p.color = palette[i % 5];
-        particles.push_back(p);
+        p->size = RandRange(0.18f, 0.32f);
+        p->maxLife = RandRange(1.2f, 1.8f);
+        p->life = p->maxLife;
+        p->color = palette[i % 5];
     }
 }
 
 void ParticleSystem::Update(float dt) {
-    for (size_t i = 0; i < particles.size();) {
-        Particle& p = particles[i];
+    for (size_t i = 0; i < m_pool.activeCount();) {
+        Particle& p = m_pool[i];
         p.life -= dt;
         if (p.life <= 0.0f) {
-            particles[i] = particles.back();
-            particles.pop_back();
+            m_pool.release(i);
             continue;
         }
 
@@ -166,7 +164,8 @@ void ParticleSystem::Update(float dt) {
 }
 
 void ParticleSystem::Draw() const {
-    for (const auto& p : particles) {
+    for (size_t i = 0; i < m_pool.activeCount(); ++i) {
+        const Particle& p = m_pool[i];
         float progress = p.life / p.maxLife;
         float currentSize = p.size * progress;
         Color c = p.color;
@@ -180,5 +179,5 @@ void ParticleSystem::Draw() const {
 }
 
 void ParticleSystem::Clear() {
-    particles.clear();
+    m_pool.clear();
 }
