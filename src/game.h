@@ -57,6 +57,7 @@ public:
     bool noclipMode;
     float screenShakeTimer;
     float respawnFadeAlpha;
+    float levelLoadFadeAlpha;
     int previousDeaths;
     float accumulator;
 

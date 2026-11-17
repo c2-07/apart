@@ -9,6 +9,7 @@ void OrbitCamera::Init(Vector3 playerBasePos) {
     pitch = Constants::CAM_DEFAULT_PITCH;
     targetDistance = Constants::CAM_DEFAULT_DISTANCE;
     currentDistance = targetDistance;
+    currentFov = Constants::CAM_FOV_BASE;
     targetPos = Vector3{ playerBasePos.x, playerBasePos.y + Constants::CAM_TARGET_HEIGHT, playerBasePos.z };
 
     float yawRad = yaw * DEG2RAD;
@@ -22,7 +23,7 @@ void OrbitCamera::Init(Vector3 playerBasePos) {
 }
 
 void OrbitCamera::Update(Vector3 playerBasePos, float dt, const std::vector<AABB>& obstacles,
-                         float mouseSensitivity, bool invertY) {
+                         float mouseSensitivity, bool invertY, Vector3 playerVelocity) {
     // Mouse input for rotation (when right button is held or always if cursor is captured)
     // To allow natural obby control: right mouse drag or free mouse when locked
     Vector2 mouseDelta = GetMouseDelta();
@@ -49,8 +50,27 @@ void OrbitCamera::Update(Vector3 playerBasePos, float dt, const std::vector<AABB
         targetDistance = std::clamp(targetDistance, Constants::CAM_MIN_DISTANCE, Constants::CAM_MAX_DISTANCE);
     }
 
-    // Smooth target follow
-    Vector3 desiredTarget = { playerBasePos.x, playerBasePos.y + Constants::CAM_TARGET_HEIGHT, playerBasePos.z };
+    // Lookahead calculation in movement direction
+    float hSpeed = Vector3Length(Vector3{ playerVelocity.x, 0.0f, playerVelocity.z });
+    Vector3 lookahead = { 0.0f, 0.0f, 0.0f };
+    if (hSpeed > 0.1f) {
+        float speedRatio = std::clamp(hSpeed / Constants::RUN_SPEED, 0.0f, 1.0f);
+        lookahead = Vector3Scale(Vector3Normalize(Vector3{ playerVelocity.x, 0.0f, playerVelocity.z }),
+                                 speedRatio * Constants::CAM_LOOKAHEAD_DIST);
+    }
+
+    // Dynamic FOV widening with speed
+    float speedRatio = std::clamp(hSpeed / Constants::RUN_SPEED, 0.0f, 1.0f);
+    float desiredFov = Constants::CAM_FOV_BASE + speedRatio * (Constants::CAM_FOV_MAX - Constants::CAM_FOV_BASE);
+    float fovLerp = std::min(1.0f, dt * 5.0f);
+    currentFov = currentFov + (desiredFov - currentFov) * fovLerp;
+
+    // Smooth target follow with lookahead
+    Vector3 desiredTarget = {
+        playerBasePos.x + lookahead.x,
+        playerBasePos.y + Constants::CAM_TARGET_HEIGHT,
+        playerBasePos.z + lookahead.z
+    };
     float targetLerp = std::min(1.0f, dt * Constants::CAM_SMOOTH_SPEED);
     targetPos = Vector3Lerp(targetPos, desiredTarget, targetLerp);
 
@@ -84,7 +104,7 @@ Camera3D OrbitCamera::GetRaylibCamera() const {
     cam.position = currentEye;
     cam.target = targetPos;
     cam.up = Vector3{ 0.0f, 1.0f, 0.0f };
-    cam.fovy = 65.0f;
+    cam.fovy = currentFov;
     cam.projection = CAMERA_PERSPECTIVE;
     return cam;
 }

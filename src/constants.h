@@ -82,4 +82,13 @@ namespace Constants {
     constexpr float LANDING_SQUASH_DURATION = 0.10f;
     constexpr float LANDING_SQUASH_FACTOR = 0.88f;
     constexpr float LEAN_MAX_ANGLE = 8.5f;
+
+    // Camera and Feel (Visual Pass Step 8)
+    constexpr float CAM_LOOKAHEAD_DIST = 1.25f;
+    constexpr float CAM_FOV_BASE = 65.0f;
+    constexpr float CAM_FOV_MAX = 71.0f;
+    constexpr float SCREEN_SHAKE_DURATION = 0.28f;
+    constexpr float SCREEN_SHAKE_MAGNITUDE = 0.20f;
+    constexpr float LEVEL_LOAD_FADE_SPEED = 2.2f;
+    constexpr float RESPAWN_FADE_SPEED = 2.8f;
 }

@@ -219,6 +219,15 @@ cmake --build build
   - **Expressive Airborne Poses:** Distinct jump pose raises both arms overhead (+135°) with outward splay (+12°) and knees drawn up (-18°); falling pose splays arms outward (+100°) with dangling legs.
   - **Skid Dust Puffs:** Rapid direction changes at high speed (`dot(vel, wishDir) < -0.2` while moving > 4.5 m/s) spawn backward-ejected dust puff particles (`SpawnSkidPuff`) under the player's feet.
 
+### Step 8: Camera and Feel, Lookahead, Dynamic FOV & Transitions
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - **Movement Lookahead:** Smooth focus point lead in velocity direction (`CAM_LOOKAHEAD_DIST = 1.25m`) using exponential interpolation (`CAM_SMOOTH_SPEED`), giving intuitive spatial visibility in the direction of sprint.
+  - **Dynamic Speed-Widened FOV:** Camera perspective field of view dynamically expands from 65.0° (`CAM_FOV_BASE`) to 71.0° (`CAM_FOV_MAX`) proportionally to horizontal sprint speed, emphasizing speed and dynamism.
+  - **Retuned Death Screen Shake:** Calibrated short, punchy impulse screen shake (`SCREEN_SHAKE_DURATION = 0.28s`, `SCREEN_SHAKE_MAGNITUDE = 0.20m`) with quadratic falloff.
+  - **Cinematic Fade Transitions:** Integrated smooth fullscreen fade-in (`LEVEL_LOAD_FADE_SPEED = 2.2`, `RESPAWN_FADE_SPEED = 2.8`) on level start, restart, and player death/respawn.
+
+
 
 
 

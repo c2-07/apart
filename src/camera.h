@@ -10,10 +10,12 @@ struct OrbitCamera {
     float targetDistance;    // Desired distance [4, 14]
     float currentDistance;   // Smoothed / obstacle-adjusted distance
     Vector3 currentEye;      // Camera position in world
+    float currentFov;        // Dynamic field of view
 
     void Init(Vector3 playerBasePos);
     void Update(Vector3 playerBasePos, float dt, const std::vector<AABB>& obstacles,
-                float mouseSensitivity = 0.18f, bool invertY = false);
+                float mouseSensitivity = 0.18f, bool invertY = false,
+                Vector3 playerVelocity = Vector3{ 0.0f, 0.0f, 0.0f });
     Camera3D GetRaylibCamera() const;
     float GetYawRadians() const;
 };

@@ -86,6 +86,7 @@ Game::Game()
       noclipMode(false),
       screenShakeTimer(0.0f),
       respawnFadeAlpha(0.0f),
+      levelLoadFadeAlpha(0.0f),
       previousDeaths(0),
       accumulator(0.0f),
       lightingShader{},
@@ -185,6 +186,7 @@ void Game::LoadLevelByIndex(int index) {
     previousDeaths = 0;
     screenShakeTimer = 0.0f;
     respawnFadeAlpha = 0.0f;
+    levelLoadFadeAlpha = 1.0f;
     accumulator = 0.0f;
 }
 
@@ -517,8 +519,8 @@ void Game::UpdatePlaying(float frameDelta) {
     Vector3 camFocus = player.position;
     if (screenShakeTimer > 0.0f) {
         screenShakeTimer -= frameDelta;
-        float shakeProgress = screenShakeTimer / 0.35f;
-        float shakeMag = 0.25f * shakeProgress;
+        float shakeProgress = screenShakeTimer / Constants::SCREEN_SHAKE_DURATION;
+        float shakeMag = Constants::SCREEN_SHAKE_MAGNITUDE * shakeProgress;
         auto randOffset = [shakeMag]() {
             return (static_cast<float>(rand() % 2000) / 1000.0f - 1.0f) * shakeMag;
         };
@@ -527,11 +529,14 @@ void Game::UpdatePlaying(float frameDelta) {
         camFocus.z += randOffset();
     }
 
-    camera.Update(camFocus, frameDelta, colliders, save.sensitivity, save.invertY);
+    camera.Update(camFocus, frameDelta, colliders, save.sensitivity, save.invertY, player.velocity);
     particles.Update(frameDelta);
 
     if (respawnFadeAlpha > 0.0f) {
-        respawnFadeAlpha = std::max(0.0f, respawnFadeAlpha - frameDelta * 2.8f);
+        respawnFadeAlpha = std::max(0.0f, respawnFadeAlpha - frameDelta * Constants::RESPAWN_FADE_SPEED);
+    }
+    if (levelLoadFadeAlpha > 0.0f) {
+        levelLoadFadeAlpha = std::max(0.0f, levelLoadFadeAlpha - frameDelta * Constants::LEVEL_LOAD_FADE_SPEED);
     }
 
     if (noclipMode) {
@@ -566,7 +571,9 @@ void Game::UpdatePlaying(float frameDelta) {
 
             if (level.deaths > previousDeaths) {
                 previousDeaths = level.deaths;
-                screenShakeTimer = 0.35f;
+                screenShakeTimer = Constants::SCREEN_SHAKE_DURATION;
+                respawnFadeAlpha = 0.85f;
+            } else if (input.respawnPressed) {
                 respawnFadeAlpha = 0.85f;
             }
 
@@ -592,9 +599,10 @@ void Game::DrawPlaying() {
     particles.Draw();
     EndMode3D();
 
-    if (respawnFadeAlpha > 0.001f) {
+    float maxFade = std::max(respawnFadeAlpha, levelLoadFadeAlpha);
+    if (maxFade > 0.001f) {
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(),
-                      Color{ 20, 10, 15, static_cast<unsigned char>(respawnFadeAlpha * 255.0f) });
+                      Color{ 18, 12, 16, static_cast<unsigned char>(maxFade * 255.0f) });
     }
 
     UI::DrawHUD(level.name, level.elapsedTime, level.parTime,
