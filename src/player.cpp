@@ -21,6 +21,8 @@ void Player::Init(Vector3 spawn) {
     deathCount = 0;
     colorIndex = 0;
     walkCycle = 0.0f;
+    landingTimer = 0.0f;
+    skidTimer = 0.0f;
     wasGrounded = false;
     Respawn();
 }
@@ -32,6 +34,8 @@ void Player::Respawn() {
     targetYaw = 0.0f;
     isGrounded = false;
     wasGrounded = false;
+    landingTimer = 0.0f;
+    skidTimer = 0.0f;
     coyoteTimer = 0.0f;
     jumpBufferTimer = 0.0f;
     isAlive = true;
@@ -235,16 +239,36 @@ void Player::UpdatePhysics(float dt, const PlayerInput& input, float cameraYaw,
     }
     isGrounded = landedThisTick;
 
+    // Timers
+    if (landingTimer > 0.0f) {
+        landingTimer = std::max(0.0f, landingTimer - dt);
+    }
+    if (skidTimer > 0.0f) {
+        skidTimer = std::max(0.0f, skidTimer - dt);
+    }
+
     // Landing event (transition from airborne to grounded with downward speed)
     if (!wasGrounded && isGrounded && previousFallSpeed < -3.5f) {
         AudioManager::Play(SoundId::LAND);
+        landingTimer = Constants::LANDING_SQUASH_DURATION;
         if (particles) {
             particles->SpawnLandPuff(position, std::abs(previousFallSpeed));
         }
     }
 
-    // Animation progress
+    // Skid dust puffs on sharp turns at speed
     float hSpeed = Vector3Length(Vector3{ velocity.x, 0.0f, velocity.z });
+    if (isGrounded && hSpeed > 4.5f && wishSpeed > 0.1f) {
+        float velDot = (velocity.x * wishDir.x + velocity.z * wishDir.z) / hSpeed;
+        if (velDot < -0.2f && skidTimer <= 0.0f) {
+            skidTimer = 0.10f;
+            if (particles) {
+                particles->SpawnSkidPuff(position, Vector3{ velocity.x, 0.0f, velocity.z });
+            }
+        }
+    }
+
+    // Animation progress
     if (isGrounded && hSpeed > 0.5f) {
         walkCycle += hSpeed * dt * 2.2f;
     } else if (isGrounded) {
@@ -283,25 +307,61 @@ void Player::Draw() const {
     rlTranslatef(position.x, position.y, position.z);
     rlRotatef(modelYaw * RAD2DEG, 0.0f, 1.0f, 0.0f);
 
+    // Squash and stretch on landing
+    if (landingTimer > 0.0f) {
+        float squashT = landingTimer / Constants::LANDING_SQUASH_DURATION;
+        float scaleY = 1.0f - (1.0f - Constants::LANDING_SQUASH_FACTOR) * squashT;
+        float scaleXZ = 1.0f + 0.5f * (1.0f - scaleY);
+        rlScalef(scaleXZ, scaleY, scaleXZ);
+    }
+
+    float hSpeed = Vector3Length(Vector3{ velocity.x, 0.0f, velocity.z });
+    float speedRatio = std::clamp(hSpeed / Constants::RUN_SPEED, 0.0f, 1.0f);
+
+    // Slight lean into movement direction
+    if (isGrounded && speedRatio > 0.05f) {
+        rlRotatef(speedRatio * Constants::LEAN_MAX_ANGLE, 1.0f, 0.0f, 0.0f);
+    }
+
     float bobY = 0.0f;
-    float legSwing = 0.0f;
-    float armSwing = 0.0f;
+    float leftLegRot = 0.0f;
+    float rightLegRot = 0.0f;
+    float leftArmRot = 0.0f;
+    float rightArmRot = 0.0f;
+    float armSplay = 0.0f;
 
     if (isGrounded) {
-        float speed = Vector3Length(Vector3{ velocity.x, 0.0f, velocity.z });
-        if (speed > 0.5f) {
-            bobY = fabsf(sinf(walkCycle)) * 0.05f;
-            legSwing = sinf(walkCycle) * 32.0f;
-            armSwing = sinf(walkCycle) * 30.0f;
+        if (hSpeed > 0.5f) {
+            // Speed-proportional walking animation
+            bobY = fabsf(sinf(walkCycle)) * (0.05f * speedRatio);
+            float legSwing = sinf(walkCycle) * (34.0f * speedRatio);
+            float armSwing = sinf(walkCycle) * (32.0f * speedRatio);
+            leftLegRot = legSwing;
+            rightLegRot = -legSwing;
+            leftArmRot = -armSwing;
+            rightArmRot = armSwing;
+        } else {
+            // Small idle breathing bob and subtle sway
+            float timeVal = static_cast<float>(GetTime());
+            bobY = sinf(timeVal * 2.5f) * 0.015f;
+            float idleSway = sinf(timeVal * 2.0f) * 2.5f;
+            leftArmRot = idleSway;
+            rightArmRot = -idleSway;
         }
     } else {
         // Airborne poses
-        if (velocity.y > 0.0f) { // Jumping
-            legSwing = -15.0f;
-            armSwing = -40.0f;
-        } else { // Falling
-            legSwing = -5.0f;
-            armSwing = 25.0f;
+        if (velocity.y > 0.0f) { // Jumping: arms reach up high
+            leftArmRot = 135.0f;
+            rightArmRot = 135.0f;
+            armSplay = 12.0f;
+            leftLegRot = -18.0f;
+            rightLegRot = -12.0f;
+        } else { // Falling: arms outstretched, legs dangle
+            leftArmRot = 100.0f;
+            rightArmRot = 100.0f;
+            armSplay = 18.0f;
+            leftLegRot = 8.0f;
+            rightLegRot = -8.0f;
         }
     }
 
@@ -332,7 +392,7 @@ void Player::Draw() const {
     // 3. Left Leg
     rlPushMatrix();
     rlTranslatef(0.22f, 0.75f, 0.0f);
-    rlRotatef(legSwing, 1.0f, 0.0f, 0.0f);
+    rlRotatef(leftLegRot, 1.0f, 0.0f, 0.0f);
     DrawCube(Vector3{ 0.0f, -0.375f, 0.0f }, 0.34f, 0.75f, 0.34f, pants);
     DrawCubeWires(Vector3{ 0.0f, -0.375f, 0.0f }, 0.35f, 0.76f, 0.35f, pantsWire);
     rlPopMatrix();
@@ -340,7 +400,7 @@ void Player::Draw() const {
     // 4. Right Leg
     rlPushMatrix();
     rlTranslatef(-0.22f, 0.75f, 0.0f);
-    rlRotatef(-legSwing, 1.0f, 0.0f, 0.0f);
+    rlRotatef(rightLegRot, 1.0f, 0.0f, 0.0f);
     DrawCube(Vector3{ 0.0f, -0.375f, 0.0f }, 0.34f, 0.75f, 0.34f, pants);
     DrawCubeWires(Vector3{ 0.0f, -0.375f, 0.0f }, 0.35f, 0.76f, 0.35f, pantsWire);
     rlPopMatrix();
@@ -348,7 +408,10 @@ void Player::Draw() const {
     // 5. Left Arm
     rlPushMatrix();
     rlTranslatef(0.55f, 1.55f + bobY, 0.0f);
-    rlRotatef(-armSwing, 1.0f, 0.0f, 0.0f);
+    rlRotatef(leftArmRot, 1.0f, 0.0f, 0.0f);
+    if (armSplay != 0.0f) {
+        rlRotatef(armSplay, 0.0f, 0.0f, 1.0f);
+    }
     // Upper arm (sleeved)
     DrawCube(Vector3{ 0.0f, -0.2f, 0.0f }, 0.28f, 0.4f, 0.28f, shirt);
     DrawCubeWires(Vector3{ 0.0f, -0.2f, 0.0f }, 0.29f, 0.41f, 0.29f, shirtWire);
@@ -360,7 +423,10 @@ void Player::Draw() const {
     // 6. Right Arm
     rlPushMatrix();
     rlTranslatef(-0.55f, 1.55f + bobY, 0.0f);
-    rlRotatef(armSwing, 1.0f, 0.0f, 0.0f);
+    rlRotatef(rightArmRot, 1.0f, 0.0f, 0.0f);
+    if (armSplay != 0.0f) {
+        rlRotatef(-armSplay, 0.0f, 0.0f, 1.0f);
+    }
     // Upper arm (sleeved)
     DrawCube(Vector3{ 0.0f, -0.2f, 0.0f }, 0.28f, 0.4f, 0.28f, shirt);
     DrawCubeWires(Vector3{ 0.0f, -0.2f, 0.0f }, 0.29f, 0.41f, 0.29f, shirtWire);

@@ -29,6 +29,8 @@ struct Player {
 
     // Animation & Visual State
     float walkCycle;
+    float landingTimer;
+    float skidTimer;
     int colorIndex; // 0: Classic Blue, 1: Crimson Red, 2: Emerald Green, 3: Royal Purple, 4: Sunset Orange, 5: Sunshine Yellow
 
     void Init(Vector3 spawn);

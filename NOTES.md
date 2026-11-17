@@ -209,6 +209,17 @@ cmake --build build
   - Finish zone upgraded to a chunky golden victory arch with left/right pillars, cross lintel, pulsing inner portal jewels, and a rotating victory star trophy.
   - Added 60-particle multi-colored celebratory confetti explosion (`SpawnConfettiBurst`) upon course completion.
 
+### Step 7: Character Animation Polish, Squash-and-Stretch & Dust Puffs
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - **Landing Squash-and-Stretch:** On hard landing (`previousFallSpeed < -3.5m/s`), the character model smoothly compresses vertically (`scaleY = 0.88`) and expands horizontally (`scaleXZ = 1.06`) over 0.10s (`LANDING_SQUASH_DURATION`), scaled upwards from feet level.
+  - **Directional Lean:** The character leans forward into the direction of motion proportionally to horizontal speed (`LEAN_MAX_ANGLE = 8.5°`), providing dynamic physical weight and velocity cues.
+  - **Speed-Proportional Limb Swing:** Arm and leg swing amplitudes scale dynamically with running velocity ratio (`34° * (speed / maxSpeed)`), eliminating artificial robotic pacing at slow speeds.
+  - **Idle Breathing & Sway:** When stationary, character displays subtle sinusoidal vertical breathing bob (`0.015m` amplitude at 2.5 rad/s) and gentle resting arm sway.
+  - **Expressive Airborne Poses:** Distinct jump pose raises both arms overhead (+135°) with outward splay (+12°) and knees drawn up (-18°); falling pose splays arms outward (+100°) with dangling legs.
+  - **Skid Dust Puffs:** Rapid direction changes at high speed (`dot(vel, wishDir) < -0.2` while moving > 4.5 m/s) spawn backward-ejected dust puff particles (`SpawnSkidPuff`) under the player's feet.
+
+
 
 
 

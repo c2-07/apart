@@ -16,6 +16,7 @@ public:
     ParticleSystem();
     void SpawnJumpPuff(Vector3 feetPos);
     void SpawnLandPuff(Vector3 feetPos, float impactSpeed);
+    void SpawnSkidPuff(Vector3 feetPos, Vector3 horizVel);
     void SpawnCheckpointBurst(Vector3 padPos);
     void SpawnConfettiBurst(Vector3 center);
     void Update(float dt);

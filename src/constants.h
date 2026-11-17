@@ -77,4 +77,9 @@ namespace Constants {
     // Checkpoint & Finish Polish (Visual Pass Step 6)
     constexpr float CHECKPOINT_FLAG_WAVE_SPEED = 6.0f;
     constexpr float CHECKPOINT_RING_PULSE_SPEED = 4.0f;
+
+    // Character Animation Polish (Visual Pass Step 7)
+    constexpr float LANDING_SQUASH_DURATION = 0.10f;
+    constexpr float LANDING_SQUASH_FACTOR = 0.88f;
+    constexpr float LEAN_MAX_ANGLE = 8.5f;
 }

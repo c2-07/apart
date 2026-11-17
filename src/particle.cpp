@@ -61,6 +61,30 @@ void ParticleSystem::SpawnLandPuff(Vector3 feetPos, float impactSpeed) {
     }
 }
 
+void ParticleSystem::SpawnSkidPuff(Vector3 feetPos, Vector3 horizVel) {
+    constexpr int count = 4;
+    Vector3 oppDir = Vector3Normalize(Vector3{ -horizVel.x, 0.0f, -horizVel.z });
+    for (int i = 0; i < count; ++i) {
+        float speed = RandRange(1.2f, 2.8f);
+        Particle p;
+        p.position = Vector3{
+            feetPos.x + RandRange(-0.2f, 0.2f),
+            feetPos.y + 0.05f,
+            feetPos.z + RandRange(-0.2f, 0.2f)
+        };
+        p.velocity = Vector3{
+            oppDir.x * speed + RandRange(-0.5f, 0.5f),
+            RandRange(0.6f, 1.4f),
+            oppDir.z * speed + RandRange(-0.5f, 0.5f)
+        };
+        p.size = RandRange(0.14f, 0.22f);
+        p.maxLife = RandRange(0.25f, 0.40f);
+        p.life = p.maxLife;
+        p.color = Color{ 225, 235, 245, 200 };
+        particles.push_back(p);
+    }
+}
+
 void ParticleSystem::SpawnCheckpointBurst(Vector3 padPos) {
     constexpr int count = 24;
     Color colors[3] = {
