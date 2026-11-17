@@ -40,45 +40,61 @@ WorldPalette GetWorldPalette(int worldId) {
     WorldPalette pal;
     switch (worldId) {
         case 2: // Ocean
-            pal.skyTop    = Color{ 60, 140, 220, 255 };
-            pal.skyBottom = Color{ 160, 220, 245, 255 };
-            pal.colors[0] = Color{ 40, 160, 200, 255 };
-            pal.colors[1] = Color{ 235, 190, 120, 255 };
-            pal.colors[2] = Color{ 70, 120, 180, 255 };
-            pal.colors[3] = Color{ 250, 215, 90, 255 };
-            pal.hazard    = Color{ 230, 45, 80, 255 };
-            pal.accent    = Color{ 50, 230, 190, 255 };
+            pal.skyTop       = Color{ 45, 125, 215, 255 };
+            pal.skyBottom    = Color{ 150, 225, 240, 255 };
+            pal.fogColor     = Color{ 150, 225, 240, 255 };
+            pal.lightColor   = Color{ 255, 250, 230, 255 };
+            pal.ambientColor = Color{ 120, 160, 195, 255 };
+            pal.fogDensity   = 0.0065f;
+            pal.colors[0]    = Color{ 40, 160, 200, 255 };
+            pal.colors[1]    = Color{ 235, 190, 120, 255 };
+            pal.colors[2]    = Color{ 70, 120, 180, 255 };
+            pal.colors[3]    = Color{ 250, 215, 90, 255 };
+            pal.hazard       = Color{ 230, 45, 80, 255 };
+            pal.accent       = Color{ 50, 230, 190, 255 };
             break;
         case 3: // Winter
-            pal.skyTop    = Color{ 110, 145, 185, 255 };
-            pal.skyBottom = Color{ 215, 230, 245, 255 };
-            pal.colors[0] = Color{ 235, 245, 255, 255 };
-            pal.colors[1] = Color{ 145, 195, 225, 255 };
-            pal.colors[2] = Color{ 110, 130, 155, 255 };
-            pal.colors[3] = Color{ 190, 220, 235, 255 };
-            pal.hazard    = Color{ 220, 60, 95, 255 };
-            pal.accent    = Color{ 90, 220, 255, 255 };
+            pal.skyTop       = Color{ 95, 130, 175, 255 };
+            pal.skyBottom    = Color{ 220, 235, 250, 255 };
+            pal.fogColor     = Color{ 220, 235, 250, 255 };
+            pal.lightColor   = Color{ 240, 245, 255, 255 };
+            pal.ambientColor = Color{ 145, 165, 195, 255 };
+            pal.fogDensity   = 0.008f;
+            pal.colors[0]    = Color{ 235, 245, 255, 255 };
+            pal.colors[1]    = Color{ 145, 195, 225, 255 };
+            pal.colors[2]    = Color{ 110, 130, 155, 255 };
+            pal.colors[3]    = Color{ 190, 220, 235, 255 };
+            pal.hazard       = Color{ 220, 60, 95, 255 };
+            pal.accent       = Color{ 90, 220, 255, 255 };
             break;
         case 4: // Factory
-            pal.skyTop    = Color{ 70, 75, 85, 255 };
-            pal.skyBottom = Color{ 140, 135, 130, 255 };
-            pal.colors[0] = Color{ 180, 100, 40, 255 };
-            pal.colors[1] = Color{ 90, 95, 105, 255 };
-            pal.colors[2] = Color{ 230, 160, 30, 255 };
-            pal.colors[3] = Color{ 60, 65, 75, 255 };
-            pal.hazard    = Color{ 245, 50, 40, 255 };
-            pal.accent    = Color{ 70, 230, 120, 255 };
+            pal.skyTop       = Color{ 65, 70, 80, 255 };
+            pal.skyBottom    = Color{ 145, 135, 125, 255 };
+            pal.fogColor     = Color{ 145, 135, 125, 255 };
+            pal.lightColor   = Color{ 255, 220, 170, 255 };
+            pal.ambientColor = Color{ 120, 115, 115, 255 };
+            pal.fogDensity   = 0.007f;
+            pal.colors[0]    = Color{ 180, 100, 40, 255 };
+            pal.colors[1]    = Color{ 90, 95, 105, 255 };
+            pal.colors[2]    = Color{ 230, 160, 30, 255 };
+            pal.colors[3]    = Color{ 60, 65, 75, 255 };
+            pal.hazard       = Color{ 245, 50, 40, 255 };
+            pal.accent       = Color{ 70, 230, 120, 255 };
             break;
         case 1: // Meadow (Default)
         default:
-            pal.skyTop    = Color{ 120, 190, 245, 255 };
-            pal.skyBottom = Color{ 200, 235, 255, 255 };
-            pal.colors[0] = Color{ 90, 185, 75, 255 };
-            pal.colors[1] = Color{ 185, 130, 80, 255 };
-            pal.colors[2] = Color{ 160, 175, 180, 255 };
-            pal.colors[3] = Color{ 245, 205, 60, 255 };
-            pal.hazard    = Color{ 235, 65, 50, 255 };
-            pal.accent    = Color{ 50, 220, 140, 255 };
+            pal.skyTop       = Color{ 105, 175, 245, 255 };
+            pal.skyBottom    = Color{ 195, 230, 255, 255 };
+            pal.fogColor     = Color{ 195, 230, 255, 255 };
+            pal.lightColor   = Color{ 255, 245, 220, 255 };
+            pal.ambientColor = Color{ 135, 150, 175, 255 };
+            pal.fogDensity   = 0.0055f;
+            pal.colors[0]    = Color{ 90, 185, 75, 255 };
+            pal.colors[1]    = Color{ 185, 130, 80, 255 };
+            pal.colors[2]    = Color{ 160, 175, 180, 255 };
+            pal.colors[3]    = Color{ 245, 205, 60, 255 };
+            pal.hazard       = Color{ 235, 65, 50, 255 };
+            pal.accent       = Color{ 50, 220, 140, 255 };
             break;
     }
     return pal;
@@ -679,21 +695,29 @@ std::vector<AABB> Level::GetSolidColliders() const {
 
 void Level::DrawSkybox() const {
     WorldPalette pal = GetWorldPalette(worldId);
-    ClearBackground(pal.skyTop);
-
-    float time = static_cast<float>(GetTime());
-    for (int i = 0; i < 8; ++i) {
-        float cx = fmodf(i * 35.0f + time * 1.5f + 100.0f, 240.0f) - 120.0f;
-        float cy = 35.0f + sinf(i * 1.3f) * 4.0f;
-        float cz = -80.0f + i * 25.0f;
-        Vector3 cPos = { cx, cy, cz };
-        DrawCube(cPos, 18.0f, 4.0f, 10.0f, Color{ 255, 255, 255, 190 });
-        DrawCubeWires(cPos, 18.05f, 4.05f, 10.05f, Color{ 220, 235, 245, 190 });
-    }
+    int sw = GetScreenWidth();
+    int sh = GetScreenHeight();
+    DrawRectangleGradientV(0, 0, sw, sh, pal.skyTop, pal.skyBottom);
 }
 
 void Level::Draw() const {
     WorldPalette pal = GetWorldPalette(worldId);
+
+    // Atmospheric ground-far haze below the course void
+    float hazeY = killY - 2.0f;
+    Color hazeColor = Color{ pal.fogColor.r, pal.fogColor.g, pal.fogColor.b, 95 };
+    DrawCube(Vector3{ 0.0f, hazeY, 0.0f }, 360.0f, 3.0f, 360.0f, hazeColor);
+
+    // Slow-drifting procedural cube clouds far above play area
+    float time = static_cast<float>(GetTime());
+    for (int i = 0; i < 9; ++i) {
+        float cx = fmodf(i * 42.0f + time * 1.2f + 150.0f, 320.0f) - 160.0f;
+        float cy = 48.0f + sinf(i * 1.5f) * 5.0f;
+        float cz = -90.0f + i * 24.0f;
+        Vector3 cPos = { cx, cy, cz };
+        DrawCube(cPos, 22.0f, 4.5f, 12.0f, Color{ 255, 255, 255, 175 });
+        DrawCubeWires(cPos, 22.04f, 4.54f, 12.04f, Color{ pal.fogColor.r, pal.fogColor.g, pal.fogColor.b, 160 });
+    }
 
     // 1. Static Boxes (with top cap & deterministic color variation)
     for (const auto& b : boxes) {

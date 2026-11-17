@@ -183,6 +183,16 @@ cmake --build build
   - **Spikes:** Dark hazard-trimmed base block with metallic silver tips atop hazard-red teeth.
   - **Bounce Pads:** High-contrast cyan perimeter ring with hot-pink launch bullseye pad.
 
+### Step 4: Sky Gradients, Atmospheric Fog & World Palettes
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - Fullscreen vertical sky gradient quad (`DrawRectangleGradientV`) rendered per world from `pal.skyTop` to `pal.skyBottom` prior to 3D scene projection.
+  - Per-world palette expansion: `skyTop`, `skyBottom`, `fogColor`, `lightColor`, `ambientColor`, and `fogDensity` customized across all 4 worlds (Meadow, Ocean, Winter, Factory).
+  - Distance depth fog computed in fragment shader: smoothly blends distant platforms into the horizon fog color according to world fog density ($1 - e^{-\text{dist} \times \text{fogDensity}}$).
+  - Low-elevation atmospheric ground haze slab (`killY - 2.0m`, $360\text{m} \times 3\text{m} \times 360\text{m}$) rendered below the course to eliminate empty void.
+  - Procedural 3D drifting cube clouds rendered high above play area ($Y \approx 48\text{m}$ to $53\text{m}$) with soft outlines.
+
+
 
 
 

@@ -147,19 +147,29 @@ void Game::Shutdown() {
 void Game::ApplyLightingShader(Vector3 eyePos, int worldId) {
     if (!shaderLoaded) return;
 
+    WorldPalette pal = GetWorldPalette(worldId);
+
     // Camera view position uniform
     float vPos[3] = { eyePos.x, eyePos.y, eyePos.z };
     SetShaderValue(lightingShader, viewPosLoc, vPos, SHADER_UNIFORM_VEC3);
 
-    // Horizon fog color uniform
-    WorldPalette pal = GetWorldPalette(worldId);
+    // Directional light color uniform
+    float lCol[4] = { pal.lightColor.r / 255.0f, pal.lightColor.g / 255.0f, pal.lightColor.b / 255.0f, 1.0f };
+    SetShaderValue(lightingShader, lightColorLoc, lCol, SHADER_UNIFORM_VEC4);
+
+    // Ambient fill light uniform
+    float ambCol[4] = { pal.ambientColor.r / 255.0f, pal.ambientColor.g / 255.0f, pal.ambientColor.b / 255.0f, 1.0f };
+    SetShaderValue(lightingShader, ambientColorLoc, ambCol, SHADER_UNIFORM_VEC4);
+
+    // Horizon fog color & density uniforms
     float horizonCol[4] = {
-        pal.skyBottom.r / 255.0f,
-        pal.skyBottom.g / 255.0f,
-        pal.skyBottom.b / 255.0f,
+        pal.fogColor.r / 255.0f,
+        pal.fogColor.g / 255.0f,
+        pal.fogColor.b / 255.0f,
         1.0f
     };
     SetShaderValue(lightingShader, fogColorLoc, horizonCol, SHADER_UNIFORM_VEC4);
+    SetShaderValue(lightingShader, fogDensityLoc, &pal.fogDensity, SHADER_UNIFORM_FLOAT);
 
     BeginShaderMode(lightingShader);
 }
