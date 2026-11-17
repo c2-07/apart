@@ -3,6 +3,8 @@
 #include "collision.h"
 #include "camera.h"
 #include "player.h"
+#include "level.h"
+#include "ui.h"
 
 #include <iostream>
 #include <vector>
@@ -41,7 +43,6 @@ static int RunSmokeTest() {
 
         std::vector<AABB> seamBoxes;
         for (int i = 0; i < 10; ++i) {
-            // Consecutive boxes from X = 0 to 20, touching at X = 2, 4, 6, 8, ...
             seamBoxes.push_back(AABB::FromMinSize(Vector3{ i * 2.0f, -1.0f, -2.0f }, Vector3{ 2.0f, 1.0f, 4.0f }));
         }
 
@@ -50,7 +51,6 @@ static int RunSmokeTest() {
         float simTime = 0.0f;
         while (simTime < 2.0f) {
             player.UpdatePhysics(dt, input, 0.0f, seamBoxes);
-            // Verify speed is maintained smoothly once accelerated
             if (simTime > 0.3f) {
                 assert(player.velocity.x > 7.0f);
             }
@@ -60,37 +60,35 @@ static int RunSmokeTest() {
         assert(player.position.x > 14.0f);
     }
 
-    // 3. High-Speed Wall Test: Cannot clip into wall
+    // 3. High-Speed Wall Test
     {
         std::cout << "[SMOKE-TEST] Testing high-speed wall collision..." << std::endl;
         Player player;
         player.Init(Vector3{ 0.0f, 0.0f, 0.0f });
 
-        // Wall placed at X = 8 to 10
         std::vector<AABB> wallBoxes = {
-            AABB::FromMinSize(Vector3{ -5.0f, -1.0f, -5.0f }, Vector3{ 20.0f, 1.0f, 10.0f }), // ground
-            AABB::FromMinSize(Vector3{ 8.0f, 0.0f, -5.0f }, Vector3{ 2.0f, 4.0f, 10.0f })     // wall
+            AABB::FromMinSize(Vector3{ -5.0f, -1.0f, -5.0f }, Vector3{ 20.0f, 1.0f, 10.0f }),
+            AABB::FromMinSize(Vector3{ 8.0f, 0.0f, -5.0f }, Vector3{ 2.0f, 4.0f, 10.0f })
         };
 
-        player.velocity.x = 80.0f; // Extremely high horizontal velocity
+        player.velocity.x = 80.0f;
         PlayerInput input;
         for (int step = 0; step < 60; ++step) {
             player.UpdatePhysics(dt, input, 0.0f, wallBoxes);
         }
-        float expectedX = 8.0f - Constants::HALF_PLAYER_WIDTH; // 7.5
+        float expectedX = 8.0f - Constants::HALF_PLAYER_WIDTH;
         std::cout << "[SMOKE-TEST] Wall impact stopped at X = " << player.position.x << " (expected " << expectedX << ")" << std::endl;
         assert(std::abs(player.position.x - expectedX) < 0.001f);
         assert(player.velocity.x == 0.0f);
     }
 
-    // 4. Thin Platform Tunneling Test: Terminal velocity drop onto 0.05m platform
+    // 4. Thin Platform Tunneling Test
     {
         std::cout << "[SMOKE-TEST] Testing thin platform tunneling prevention..." << std::endl;
         Player player;
         player.Init(Vector3{ 0.0f, 8.0f, 0.0f });
-        player.velocity.y = Constants::TERMINAL_VELOCITY; // -40 m/s
+        player.velocity.y = Constants::TERMINAL_VELOCITY;
 
-        // Thin platform: 0.05m thickness from Y = -0.05 to 0.0
         std::vector<AABB> thinBoxes = {
             AABB::FromMinSize(Vector3{ -5.0f, -0.05f, -5.0f }, Vector3{ 10.0f, 0.05f, 10.0f })
         };
@@ -109,18 +107,15 @@ static int RunSmokeTest() {
         std::cout << "[SMOKE-TEST] Testing coyote time..." << std::endl;
         Player player;
         player.Init(Vector3{ 0.0f, 0.0f, 0.0f });
-        // Platform ends at X = 2.0
         std::vector<AABB> ledgeBoxes = {
-            AABB::FromMinSize(Vector3{ -5.0f, -1.0f, -5.0f }, Vector3{ 7.0f, 1.0f, 10.0f }) // [ -5, 2 ]
+            AABB::FromMinSize(Vector3{ -5.0f, -1.0f, -5.0f }, Vector3{ 7.0f, 1.0f, 10.0f })
         };
 
         PlayerInput input;
-        // Step once to establish grounded state
         player.UpdatePhysics(dt, input, 0.0f, ledgeBoxes);
         assert(player.isGrounded);
 
-        input.moveRight = 1.0f; // Walk off ledge towards +X
-        // Walk until airborne
+        input.moveRight = 1.0f;
         int safetyTicks = 0;
         while (player.isGrounded && safetyTicks < 200) {
             player.UpdatePhysics(dt, input, 0.0f, ledgeBoxes);
@@ -129,25 +124,23 @@ static int RunSmokeTest() {
         assert(!player.isGrounded);
         assert(player.position.x > 2.0f);
 
-        // Advance 4 ticks in air (~0.033s, well within 0.1s coyote window)
         for (int step = 0; step < 4; ++step) {
             player.UpdatePhysics(dt, input, 0.0f, ledgeBoxes);
         }
         assert(!player.isGrounded);
         assert(player.coyoteTimer > 0.0f);
 
-        // Press jump while in mid-air
         input.jumpPressed = true;
         player.UpdatePhysics(dt, input, 0.0f, ledgeBoxes);
         std::cout << "[SMOKE-TEST] Coyote jump velocity Y = " << player.velocity.y << " m/s" << std::endl;
-        assert(player.velocity.y > 10.0f); // Jump succeeded!
+        assert(player.velocity.y > 10.0f);
     }
 
     // 6. Jump Buffering Test
     {
         std::cout << "[SMOKE-TEST] Testing jump buffering..." << std::endl;
         Player player;
-        player.Init(Vector3{ 0.0f, 0.3f, 0.0f }); // Falling 0.3m above ground
+        player.Init(Vector3{ 0.0f, 0.3f, 0.0f });
         player.velocity.y = -5.0f;
 
         std::vector<AABB> groundBoxes = {
@@ -155,12 +148,11 @@ static int RunSmokeTest() {
         };
 
         PlayerInput input;
-        input.jumpPressed = true; // Buffer jump before landing
+        input.jumpPressed = true;
         player.UpdatePhysics(dt, input, 0.0f, groundBoxes);
         input.jumpPressed = false;
         assert(player.jumpBufferTimer > 0.0f);
 
-        // Advance until landed and buffered jump executes (should execute in < 15 ticks)
         bool jumpFired = false;
         for (int step = 0; step < 15; ++step) {
             player.UpdatePhysics(dt, input, 0.0f, groundBoxes);
@@ -184,12 +176,10 @@ static int RunSmokeTest() {
         cam.pitch = 0.0f;
         cam.targetDistance = 10.0f;
 
-        // Obstacle at Z = 3.0 between player and camera eye (which sits at +Z)
         std::vector<AABB> obstacles = {
             AABB::FromCenterSize(Vector3{ 0.0f, Constants::CAM_TARGET_HEIGHT, 3.0f }, Vector3{ 2.0f, 2.0f, 0.4f })
         };
 
-        // Update camera multiple frames to smooth pull-in
         for (int f = 0; f < 30; ++f) {
             cam.Update(playerBase, 0.016f, obstacles);
         }
@@ -198,7 +188,47 @@ static int RunSmokeTest() {
         assert(cam.currentDistance < 4.0f);
     }
 
-    std::cout << "[SMOKE-TEST] All Milestone 2 collision and physics assertions passed!" << std::endl;
+    // 8. Milestone 3: Level Loading and Flow Verification
+    {
+        std::cout << "[SMOKE-TEST] Testing Level loading and flow on w1_l1.lvl..." << std::endl;
+        Level level;
+        bool loaded = level.LoadFromFile("assets/levels/w1_l1.lvl");
+        assert(loaded);
+        assert(level.boxes.size() >= 25);
+        assert(level.checkpoints.size() == 2);
+        assert(level.hasFinish == true);
+        assert(level.name == "Meadow Steps");
+
+        Player player;
+        level.Reset(player);
+        assert(player.position.x == level.spawnPos.x && player.position.z == level.spawnPos.z);
+        assert(level.GetActivatedCheckpointCount() == 0);
+        assert(!level.isCompleted);
+
+        // Teleport player into checkpoint 1
+        player.position = level.checkpoints[0].position;
+        level.Update(dt, player);
+        std::cout << "[SMOKE-TEST] Checkpoint 1 activated: " << level.checkpoints[0].activated << std::endl;
+        assert(level.checkpoints[0].activated);
+        assert(level.GetActivatedCheckpointCount() == 1);
+        assert(player.spawnPoint.x == level.checkpoints[0].position.x);
+
+        // Test respawn at checkpoint 1 on death
+        player.position.y = level.killY - 2.0f; // fall below killY
+        level.Update(dt, player);
+        assert(level.deaths == 1);
+        assert(player.position.x == level.checkpoints[0].position.x);
+        assert(player.position.z == level.checkpoints[0].position.z);
+
+        // Teleport player into finish zone
+        player.position = level.finish.triggerAABB.GetCenter();
+        level.Update(dt, player);
+        std::cout << "[SMOKE-TEST] Level completed: " << level.isCompleted << ", Star rating: " << level.starRating << std::endl;
+        assert(level.isCompleted);
+        assert(level.starRating >= 1 && level.starRating <= 3);
+    }
+
+    std::cout << "[SMOKE-TEST] All Milestone 3 level loading and flow assertions passed!" << std::endl;
     return 0;
 }
 
@@ -213,33 +243,20 @@ int main(int argc, char* argv[]) {
     const int screenHeight = 720;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(screenWidth, screenHeight, "Roblox Obby Adventure - M2 Collision");
+    InitWindow(screenWidth, screenHeight, "Roblox Obby Adventure - M3 Level Flow");
     if (!IsWindowReady()) {
         std::cerr << "Window could not be initialized. Running smoke test instead." << std::endl;
         return RunSmokeTest();
     }
     SetTargetFPS(60);
 
-    Player player;
-    player.Init(Vector3{ 0.0f, 2.0f, 0.0f });
+    Level level;
+    if (!level.LoadFromFile("assets/levels/w1_l1.lvl")) {
+        std::cerr << "Failed to load w1_l1.lvl, running with fallback ground." << std::endl;
+    }
 
-    // Hardcoded set of boxes showcasing seams, steps, walls, and narrow platforms
-    std::vector<AABB> colliders = {
-        // Main spawn platform
-        AABB::FromCenterSize(Vector3{ 0.0f, -0.5f, 0.0f }, Vector3{ 14.0f, 1.0f, 14.0f }),
-        // Seam platforms (3 adjacent boxes side by side)
-        AABB::FromMinSize(Vector3{ 7.0f, -1.0f, -3.0f }, Vector3{ 4.0f, 1.0f, 6.0f }),
-        AABB::FromMinSize(Vector3{ 11.0f, -1.0f, -3.0f }, Vector3{ 4.0f, 1.0f, 6.0f }),
-        AABB::FromMinSize(Vector3{ 15.0f, -1.0f, -3.0f }, Vector3{ 4.0f, 1.0f, 6.0f }),
-        // Elevated steps
-        AABB::FromMinSize(Vector3{ 19.0f, 0.0f, -3.0f }, Vector3{ 3.0f, 1.0f, 6.0f }),
-        AABB::FromMinSize(Vector3{ 22.0f, 1.0f, -3.0f }, Vector3{ 3.0f, 1.0f, 6.0f }),
-        AABB::FromMinSize(Vector3{ 25.0f, 2.0f, -3.0f }, Vector3{ 4.0f, 1.0f, 6.0f }),
-        // High wall for camera pull-in and wall collision testing
-        AABB::FromCenterSize(Vector3{ 0.0f, 2.5f, -7.0f }, Vector3{ 14.0f, 5.0f, 1.0f }),
-        // Thin floating platform
-        AABB::FromCenterSize(Vector3{ 0.0f, 4.0f, 5.0f }, Vector3{ 4.0f, 0.1f, 4.0f })
-    };
+    Player player;
+    level.Reset(player);
 
     OrbitCamera camera;
     camera.Init(player.position);
@@ -252,60 +269,65 @@ int main(int argc, char* argv[]) {
             frameDelta = Constants::MAX_FRAME_DELTA;
         }
 
+        std::vector<AABB> colliders = level.GetSolidColliders();
+
+        // Only update camera and player physics while actively playing
         camera.Update(player.position, frameDelta, colliders);
 
-        accumulator += frameDelta;
-        while (accumulator >= Constants::PHYSICS_DT) {
-            PlayerInput input;
-            if (IsKeyDown(KEY_W)) input.moveForward += 1.0f;
-            if (IsKeyDown(KEY_S)) input.moveForward -= 1.0f;
-            if (IsKeyDown(KEY_D)) input.moveRight   += 1.0f;
-            if (IsKeyDown(KEY_A)) input.moveRight   -= 1.0f;
-            input.jumpPressed    = IsKeyPressed(KEY_SPACE);
-            input.jumpHeld       = IsKeyDown(KEY_SPACE);
-            input.respawnPressed = IsKeyPressed(KEY_R);
+        if (!level.isCompleted) {
+            accumulator += frameDelta;
+            while (accumulator >= Constants::PHYSICS_DT) {
+                PlayerInput input;
+                if (IsKeyDown(KEY_W)) input.moveForward += 1.0f;
+                if (IsKeyDown(KEY_S)) input.moveForward -= 1.0f;
+                if (IsKeyDown(KEY_D)) input.moveRight   += 1.0f;
+                if (IsKeyDown(KEY_A)) input.moveRight   -= 1.0f;
+                input.jumpPressed    = IsKeyPressed(KEY_SPACE);
+                input.jumpHeld       = IsKeyDown(KEY_SPACE);
+                input.respawnPressed = IsKeyPressed(KEY_R);
 
-            player.UpdatePhysics(Constants::PHYSICS_DT, input, camera.GetYawRadians(), colliders);
+                player.UpdatePhysics(Constants::PHYSICS_DT, input, camera.GetYawRadians(), colliders);
+                level.Update(Constants::PHYSICS_DT, player);
 
-            if (player.position.y < -15.0f) {
-                player.deathCount++;
-                player.Respawn();
+                accumulator -= Constants::PHYSICS_DT;
             }
-
-            accumulator -= Constants::PHYSICS_DT;
         }
 
+        // Render Frame
         BeginDrawing();
-        ClearBackground(Color{ 135, 206, 235, 255 });
+
+        // Skybox & 3D world
+        level.DrawSkybox();
 
         BeginMode3D(camera.GetRaylibCamera());
-
-        // Draw colliders
-        for (const auto& box : colliders) {
-            Vector3 center = box.GetCenter();
-            Vector3 size = box.GetSize();
-
-            Color faceColor = (center.y < 0.0f) ? Color{ 80, 180, 70, 255 } : Color{ 230, 140, 50, 255 };
-            Color wireColor = (center.y < 0.0f) ? Color{ 50, 130, 40, 255 } : Color{ 160, 90, 30, 255 };
-
-            DrawCube(center, size.x, size.y, size.z, faceColor);
-            DrawCubeWires(center, size.x + 0.01f, size.y + 0.01f, size.z + 0.01f, wireColor);
-        }
-
-        DrawGrid(40, 1.0f);
+        level.Draw();
         player.Draw();
-
         EndMode3D();
 
-        DrawFPS(20, 20);
-        DrawText("M2: Collision - Walk across seams, test walls & thin platforms", 20, 50, 18, DARKGRAY);
+        // HUD (always drawn during play)
+        UI::DrawHUD(level.name, level.elapsedTime, level.parTime,
+                   level.GetActivatedCheckpointCount(), level.GetTotalCheckpointCount(), level.deaths);
 
-        char statsBuf[160];
-        snprintf(statsBuf, sizeof(statsBuf), "Pos: (%.2f, %.2f, %.2f) | Vel: (%.1f, %.1f, %.1f) | Grounded: %s | CamDist: %.1fm",
-                 player.position.x, player.position.y, player.position.z,
-                 player.velocity.x, player.velocity.y, player.velocity.z,
-                 player.isGrounded ? "YES" : "NO", camera.currentDistance);
-        DrawText(statsBuf, 20, 75, 18, DARKBLUE);
+        // Results screen modal on level completion
+        if (level.isCompleted) {
+            ResultsAction action = UI::DrawResultsScreen(
+                GetScreenWidth(), GetScreenHeight(),
+                level.elapsedTime, level.parTime, level.deaths, level.starRating
+            );
+
+            if (action == ResultsAction::RETRY) {
+                level.Reset(player);
+                camera.Init(player.position);
+                accumulator = 0.0f;
+            } else if (action == ResultsAction::NEXT_LEVEL) {
+                // For M3, restarts the course cleanly
+                level.Reset(player);
+                camera.Init(player.position);
+                accumulator = 0.0f;
+            }
+        }
+
+        DrawFPS(GetScreenWidth() - 90, 20);
 
         EndDrawing();
     }

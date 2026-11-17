@@ -24,6 +24,8 @@ add_executable(obby
     src/collision.cpp
     src/camera.cpp
     src/player.cpp
+    src/level.cpp
+    src/ui.cpp
 )
 
 target_include_directories(obby PRIVATE

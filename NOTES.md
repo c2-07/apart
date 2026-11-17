@@ -47,3 +47,16 @@ cmake --build build
   - Camera collision pull-in using ray-vs-AABB sweep against scene geometry with smooth pull-in and obstacle clearance margin (0.25m).
   - Comprehensive headless unit tests in `--smoke-test` asserting all collision and control criteria.
 
+### Milestone 3: Level Loading & Flow
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - Robust line-based `.lvl` file parser skipping comments, empty lines, and gracefully reporting line errors.
+  - Parsed entities: `name`, `world`, `killY`, `par`, `spawn`, `box`, `checkpoint`, `finish`.
+  - Authored `assets/levels/w1_l1.lvl`: tutorial course with 28 platforms, 2 checkpoints, and finish zone.
+  - Checkpoint system: activating checkpoint sets player's active spawn point, activates flag/pad visual indicator, and increments checkpoint HUD counter.
+  - Fall-to-death & R-key respawns player at active checkpoint.
+  - Clean HUD panel showing Level Name, Level Timer, Par Time, Checkpoint count, and Death counter.
+  - Results screen dialog modal displaying final time, deaths, 1-3 star rating calculation based on par time, with interactive Retry and Next buttons.
+  - Automated smoke test verifying parsing, checkpoint triggers, respawn points, and finish trigger.
+
+
