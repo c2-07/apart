@@ -122,4 +122,9 @@ namespace Constants {
     constexpr float BUMP_BLOCK_BOUNCE_HEIGHT = 0.20f;
     constexpr float COIN_POP_DURATION = 0.40f;
     constexpr float COIN_POP_HEIGHT = 0.80f;
+
+    // Saw Blade Gameplay System (2D Pass Step 4)
+    constexpr float SAW_ROTATION_SPEED = 14.0f;
+    constexpr float SAW_DEFAULT_RADIUS = 0.8f;
+    constexpr float SAW_DEFAULT_SPEED = 2.5f;
 }

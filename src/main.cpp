@@ -16,6 +16,7 @@
 #include "walker.h"
 #include "flyer.h"
 #include "bump_block.h"
+#include "saw.h"
 
 #include <iostream>
 #include <vector>
@@ -533,6 +534,40 @@ static int RunSmokeTest() {
         }
 
         std::cout << "[SMOKE-TEST] Bump Blocks verified successfully!" << std::endl;
+    }
+
+    // 15. 2D Pass Step 4: Saw Blade Hazard Verification
+    {
+        std::cout << "[SMOKE-TEST] Testing Saw Blade Hazards..." << std::endl;
+
+        Saw saw(Vec3{ 0.0f, 2.0f, 0.0f }, Vec3{ 6.0f, 2.0f, 0.0f }, 2.0f, 0.8f);
+        assert(!saw.isSolid());
+        assert(saw.getRadius() == 0.8f);
+
+        Player player;
+        player.init(Vec3{ 0.0f, 0.0f, 0.0f });
+
+        // 1. Clear of saw: player is far above (y = 5.0m, feet at 5.0m, head at 7.0m)
+        player.setPosition(Vec3{ 0.0f, 5.0f, 0.0f });
+        saw.update(0.016f, player);
+        assert(player.getHearts() == Constants::MAX_HEARTS);
+        assert(!player.isInvincible());
+
+        // 2. Overlapping saw: saw center at (0, 2, 0), player placed with feet at y = 1.0m (head at 3.0m)
+        player.setPosition(Vec3{ 0.0f, 1.0f, 0.0f });
+        saw.update(0.016f, player);
+        assert(player.getHearts() == Constants::MAX_HEARTS - 1);
+        assert(player.isInvincible());
+        assert(player.getVelocity().y > 0.0f);
+
+        // 3. Saw movement along track
+        Player dummyPlayer;
+        dummyPlayer.init(Vec3{ 100.0f, 100.0f, 0.0f });
+        saw.update(1.0f, dummyPlayer);
+        assert(saw.getPosition().x > 1.8f && saw.getPosition().x < 2.2f);
+        assert(saw.getRotationAngle() > 0.0f);
+
+        std::cout << "[SMOKE-TEST] Saw Blade Hazards verified successfully!" << std::endl;
     }
 
     std::cout << "[SMOKE-TEST] ALL MILESTONES (M1 through M8) VERIFIED AND PASSED!" << std::endl;

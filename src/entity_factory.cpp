@@ -12,6 +12,7 @@
 #include "walker.h"
 #include "flyer.h"
 #include "bump_block.h"
+#include "saw.h"
 #include "constants.h"
 #include "level_error.h"
 #include <algorithm>
@@ -125,6 +126,16 @@ std::unique_ptr<Entity> EntityFactory::createEntity(const std::string& type, std
             return std::make_unique<BumpBlock>(Vec3{ args[0], args[1], args[2] }, static_cast<int>(args[3]), static_cast<int>(args[4]));
         }
         throw LevelParseError("Invalid bump entity parameters");
+    } else if (type == "saw") {
+        std::vector<float> args;
+        float val;
+        while (ss >> val) args.push_back(val);
+        if (args.size() == 6) {
+            return std::make_unique<Saw>(Vec3{ args[0], args[1], 0.0f }, Vec3{ args[2], args[3], 0.0f }, args[4], args[5]);
+        } else if (args.size() >= 8) {
+            return std::make_unique<Saw>(Vec3{ args[0], args[1], args[2] }, Vec3{ args[3], args[4], args[5] }, args[6], args[7]);
+        }
+        throw LevelParseError("Invalid saw entity parameters");
     }
     return nullptr;
 }

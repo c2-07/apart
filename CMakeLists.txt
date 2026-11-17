@@ -40,6 +40,7 @@ add_executable(obby
     src/enemy.cpp
     src/walker.cpp
     src/flyer.cpp
+    src/saw.cpp
     src/ghost_recorder.cpp
     src/camera_controller.cpp
     src/player_animator.cpp
