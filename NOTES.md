@@ -81,6 +81,19 @@ cmake --build build
   - Procedural sound effect synthesizer using raylib `Wave` API (jump chirp, landing thud, checkpoint chime, death buzz, victory fanfare) with no external audio assets needed.
   - Interactive master volume slider control on the HUD.
 
+### Milestone 6: Single-Player Solo Cooperative Puzzles
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - Interactive pressure buttons (`button id x y z duration`): activated when stepped on by either player or ghost clone; stays active for `duration` seconds after release.
+  - Visible 3D countdown progress ring rendered around active buttons.
+  - Linked timed doors (`door id x y z sx sy sz`): solid barrier when closed; passes player cleanly when active.
+  - Ghost-clone recording system (`GhostRecorder`): records position, yaw, and grounded state up to 20 seconds at 120 Hz, replaying as a translucent holographic clone capable of stepping on pressure plates.
+  - Authored two complete standalone puzzle courses:
+    - `assets/levels/puzzle_timed.lvl`: Timed route puzzle requiring sprint and precision platforming across a chasm before the door locks.
+    - `assets/levels/puzzle_ghost.lvl`: Asymmetric dual-path co-op puzzle requiring ghost recording to hold Button 2 while the real player runs through Door 2.
+  - Automated smoke tests validating both puzzle mechanics and completions.
+
+
 
 
 

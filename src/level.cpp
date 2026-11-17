@@ -72,13 +72,11 @@ AABB Mover::GetAABB() const {
 }
 
 bool Spinner::CheckOverlapWithPlayer(const AABB& playerAABB) const {
-    // Check Y axis overlap
     float halfH = height * 0.5f;
     if (playerAABB.max.y < (center.y - halfH) || playerAABB.min.y > (center.y + halfH)) {
         return false;
     }
 
-    // Line segment representing the rotating bar in XZ
     float cosA = cosf(currentAngle);
     float sinA = sinf(currentAngle);
     float halfL = length * 0.5f;
@@ -89,7 +87,6 @@ bool Spinner::CheckOverlapWithPlayer(const AABB& playerAABB) const {
     Vector3 pCenter = playerAABB.GetCenter();
     Vector2 pPos = { pCenter.x, pCenter.z };
 
-    // Point to segment distance
     Vector2 seg = { p2.x - p1.x, p2.y - p1.y };
     float segLenSq = seg.x * seg.x + seg.y * seg.y;
     float t = 0.0f;
@@ -103,7 +100,6 @@ bool Spinner::CheckOverlapWithPlayer(const AABB& playerAABB) const {
     float dz = pPos.y - closest.y;
     float distSq = dx * dx + dz * dz;
 
-    // Player half-width = 0.5m, bar half-thickness = 0.25m -> combined radius ~ 0.72m
     constexpr float HIT_RADIUS = 0.72f;
     return distSq <= (HIT_RADIUS * HIT_RADIUS);
 }
@@ -116,6 +112,123 @@ bool CrumbleTile::IsSolid() const {
     return state != CrumbleState::FALLEN;
 }
 
+// --- GhostRecorder Implementation ---
+GhostRecorder::GhostRecorder()
+    : state(State::IDLE),
+      playbackIndex(0),
+      recordTimer(0.0f) {
+    frames.reserve(2400); // 20s at 120Hz
+}
+
+void GhostRecorder::StartRecording() {
+    frames.clear();
+    playbackIndex = 0;
+    recordTimer = 0.0f;
+    state = State::RECORDING;
+    std::cout << "[GhostRecorder] Started recording ghost actions..." << std::endl;
+}
+
+void GhostRecorder::StopRecording() {
+    if (state == State::RECORDING) {
+        if (!frames.empty()) {
+            StartPlayback();
+        } else {
+            state = State::IDLE;
+        }
+    }
+}
+
+void GhostRecorder::StartPlayback() {
+    if (!frames.empty()) {
+        state = State::PLAYING;
+        playbackIndex = 0;
+        std::cout << "[GhostRecorder] Started ghost playback (" << frames.size() << " frames)." << std::endl;
+    } else {
+        state = State::IDLE;
+    }
+}
+
+void GhostRecorder::Reset() {
+    state = State::IDLE;
+    frames.clear();
+    playbackIndex = 0;
+    recordTimer = 0.0f;
+}
+
+void GhostRecorder::RecordTick(Vector3 pos, float yaw, bool grounded) {
+    if (state == State::RECORDING) {
+        frames.push_back(GhostFrame{ pos, yaw, grounded });
+        recordTimer += Constants::PHYSICS_DT;
+        if (recordTimer >= MAX_RECORD_TIME) {
+            StopRecording();
+        }
+    }
+}
+
+void GhostRecorder::UpdatePlayback() {
+    if (state == State::PLAYING && !frames.empty()) {
+        playbackIndex++;
+        if (playbackIndex >= frames.size()) {
+            playbackIndex = 0; // Loop ghost recording
+        }
+    }
+}
+
+Vector3 GhostRecorder::GetCurrentPos() const {
+    if (frames.empty() || state != State::PLAYING) {
+        return Vector3{ 0.0f, -999.0f, 0.0f };
+    }
+    return frames[playbackIndex].position;
+}
+
+float GhostRecorder::GetCurrentYaw() const {
+    if (frames.empty() || state != State::PLAYING) return 0.0f;
+    return frames[playbackIndex].yaw;
+}
+
+bool GhostRecorder::HasActiveGhost() const {
+    return state == State::PLAYING && !frames.empty();
+}
+
+AABB GhostRecorder::GetAABB() const {
+    Vector3 p = GetCurrentPos();
+    return AABB{
+        Vector3{ p.x - Constants::HALF_PLAYER_WIDTH, p.y, p.z - Constants::HALF_PLAYER_DEPTH },
+        Vector3{ p.x + Constants::HALF_PLAYER_WIDTH, p.y + Constants::PLAYER_HEIGHT, p.z + Constants::HALF_PLAYER_DEPTH }
+    };
+}
+
+void GhostRecorder::Draw() const {
+    if (!HasActiveGhost()) return;
+
+    Vector3 pos = GetCurrentPos();
+    float yaw = GetCurrentYaw();
+
+    rlPushMatrix();
+    rlTranslatef(pos.x, pos.y, pos.z);
+    rlRotatef(yaw * RAD2DEG, 0.0f, 1.0f, 0.0f);
+
+    Color ghostBody = Color{ 80, 220, 255, 140 };
+    Color ghostWire = Color{ 160, 245, 255, 220 };
+
+    // Torso
+    DrawCube(Vector3{ 0.0f, 1.20f, 0.0f }, 0.8f, 0.9f, 0.45f, ghostBody);
+    DrawCubeWires(Vector3{ 0.0f, 1.20f, 0.0f }, 0.82f, 0.92f, 0.47f, ghostWire);
+
+    // Head
+    DrawCube(Vector3{ 0.0f, 1.95f, 0.0f }, 0.55f, 0.55f, 0.55f, ghostBody);
+    DrawCubeWires(Vector3{ 0.0f, 1.95f, 0.0f }, 0.57f, 0.57f, 0.57f, ghostWire);
+
+    // Limbs
+    DrawCube(Vector3{ 0.22f, 0.375f, 0.0f }, 0.34f, 0.75f, 0.34f, ghostBody);
+    DrawCube(Vector3{ -0.22f, 0.375f, 0.0f }, 0.34f, 0.75f, 0.34f, ghostBody);
+    DrawCube(Vector3{ 0.55f, 1.25f, 0.0f }, 0.28f, 0.75f, 0.28f, ghostBody);
+    DrawCube(Vector3{ -0.55f, 1.25f, 0.0f }, 0.28f, 0.75f, 0.28f, ghostBody);
+
+    rlPopMatrix();
+}
+
+// --- Level Implementation ---
 Level::Level()
     : name("Untitled Level"),
       worldId(1),
@@ -143,6 +256,9 @@ bool Level::LoadFromFile(const std::string& filepath) {
     crumbleTiles.clear();
     spikesList.clear();
     bouncePads.clear();
+    buttons.clear();
+    doors.clear();
+    ghost.Reset();
     hasFinish = false;
     spawnPos = Vector3{ 0.0f, 1.0f, 0.0f };
     name = "Untitled";
@@ -277,13 +393,43 @@ bool Level::LoadFromFile(const std::string& filepath) {
             } else {
                 std::cerr << "[Level Parser] Error in " << filepath << ":" << lineNum << ": invalid bounce\n";
             }
+        } else if (token == "button") {
+            int bId = 0;
+            float x, y, z, dur;
+            if (ss >> bId >> x >> y >> z >> dur) {
+                ButtonEntity btn;
+                btn.id = bId;
+                btn.position = Vector3{ x, y, z };
+                btn.duration = std::max(0.0f, dur);
+                btn.currentTimer = 0.0f;
+                btn.isPressed = false;
+                btn.isActive = false;
+                btn.baseAABB = AABB::FromCenterSize(Vector3{ x, y - 0.15f, z }, Vector3{ 2.2f, 0.3f, 2.2f });
+                btn.triggerAABB = AABB::FromCenterSize(Vector3{ x, y + 0.3f, z }, Vector3{ 2.0f, 0.7f, 2.0f });
+                buttons.push_back(btn);
+            } else {
+                std::cerr << "[Level Parser] Error in " << filepath << ":" << lineNum << ": invalid button\n";
+            }
+        } else if (token == "door") {
+            int dId = 0;
+            float x, y, z, sx, sy, sz;
+            if (ss >> dId >> x >> y >> z >> sx >> sy >> sz) {
+                DoorEntity dr;
+                dr.id = dId;
+                dr.center = Vector3{ x, y, z };
+                dr.size = Vector3{ sx, sy, sz };
+                dr.aabb = AABB::FromCenterSize(dr.center, dr.size);
+                dr.isOpen = false;
+                doors.push_back(dr);
+            } else {
+                std::cerr << "[Level Parser] Error in " << filepath << ":" << lineNum << ": invalid door\n";
+            }
         }
     }
 
     std::cout << "[Level Parser] Loaded '" << name << "': "
               << boxes.size() << " boxes, " << movers.size() << " movers, "
-              << spinners.size() << " spinners, " << crumbleTiles.size() << " crumbles, "
-              << spikesList.size() << " spikes, " << bouncePads.size() << " bounce pads." << std::endl;
+              << buttons.size() << " buttons, " << doors.size() << " doors." << std::endl;
     return true;
 }
 
@@ -294,25 +440,25 @@ void Level::Reset(Player& player) {
     isCompleted = false;
     starRating = 0;
 
-    for (auto& cp : checkpoints) {
-        cp.activated = false;
-    }
-
+    for (auto& cp : checkpoints) cp.activated = false;
     for (auto& m : movers) {
         m.currentPos = m.basePos;
         m.frameDisplacement = Vector3{ 0.0f, 0.0f, 0.0f };
     }
-
-    for (auto& s : spinners) {
-        s.currentAngle = 0.0f;
-    }
-
+    for (auto& s : spinners) s.currentAngle = 0.0f;
     for (auto& c : crumbleTiles) {
         c.state = CrumbleState::STABLE;
         c.timer = 0.0f;
         c.currentPos = c.basePos;
     }
+    for (auto& btn : buttons) {
+        btn.currentTimer = 0.0f;
+        btn.isPressed = false;
+        btn.isActive = false;
+    }
+    for (auto& dr : doors) dr.isOpen = false;
 
+    ghost.Reset();
     player.Init(spawnPos);
 }
 
@@ -321,17 +467,22 @@ void Level::Update(float dt, Player& player) {
         elapsedTime += dt;
     }
 
-    // 1. Update Movers & carrying logic
+    // 1. Ghost Recorder Tick / Playback
+    if (ghost.state == GhostRecorder::State::RECORDING) {
+        ghost.RecordTick(player.position, player.modelYaw, player.isGrounded);
+    } else if (ghost.state == GhostRecorder::State::PLAYING) {
+        ghost.UpdatePlayback();
+    }
+
+    // 2. Movers
     AABB playerAABB = player.GetAABB();
     for (auto& m : movers) {
         float phase = fmodf(elapsedTime, m.period) / m.period;
-        // Smooth sine ping-pong: [0 -> 1 -> 0]
         float s = 0.5f * (1.0f - cosf(phase * 2.0f * PI));
         Vector3 nextPos = Vector3Add(m.basePos, Vector3Scale(m.delta, s));
         m.frameDisplacement = Vector3Subtract(nextPos, m.currentPos);
         m.currentPos = nextPos;
 
-        // Check if player is standing on this mover
         AABB moverAABB = m.GetAABB();
         bool standingOnTop = player.isGrounded &&
                              (std::abs(player.position.y - moverAABB.max.y) < 0.05f) &&
@@ -339,12 +490,11 @@ void Level::Update(float dt, Player& player) {
                              (playerAABB.min.z < moverAABB.max.z && playerAABB.max.z > moverAABB.min.z);
 
         if (standingOnTop) {
-            // Carry player along with the platform displacement
             player.position = Vector3Add(player.position, m.frameDisplacement);
         }
     }
 
-    // 2. Update Spinners & collision
+    // 3. Spinners
     for (auto& s : spinners) {
         s.currentAngle += s.speed * dt;
         if (s.CheckOverlapWithPlayer(player.GetAABB())) {
@@ -356,7 +506,7 @@ void Level::Update(float dt, Player& player) {
         }
     }
 
-    // 3. Update Crumble Tiles
+    // 4. Crumble Tiles
     playerAABB = player.GetAABB();
     for (auto& c : crumbleTiles) {
         AABB cAABB = c.GetAABB();
@@ -374,7 +524,6 @@ void Level::Update(float dt, Player& player) {
                 break;
             case CrumbleState::CRUMBLING:
                 c.timer -= dt;
-                // Subtle shaking effect
                 c.currentPos.x = c.basePos.x + sinf(c.timer * 60.0f) * 0.06f;
                 c.currentPos.z = c.basePos.z + cosf(c.timer * 60.0f) * 0.06f;
                 if (c.timer <= 0.0f) {
@@ -394,7 +543,7 @@ void Level::Update(float dt, Player& player) {
         }
     }
 
-    // 4. Check Spikes
+    // 5. Spikes
     for (const auto& sp : spikesList) {
         if (CheckAABBOverlap(player.GetAABB(), sp.aabb)) {
             deaths++;
@@ -405,7 +554,7 @@ void Level::Update(float dt, Player& player) {
         }
     }
 
-    // 5. Check Bounce Pads
+    // 6. Bounce Pads
     for (const auto& bp : bouncePads) {
         if (CheckAABBOverlap(player.GetAABB(), bp.aabb)) {
             if (player.velocity.y <= 1.0f) {
@@ -416,7 +565,38 @@ void Level::Update(float dt, Player& player) {
         }
     }
 
-    // 6. Check Kill Plane
+    // 7. Buttons & Doors Logic (Milestone 6)
+    AABB ghostAABB = ghost.GetAABB();
+    playerAABB = player.GetAABB();
+
+    for (auto& btn : buttons) {
+        bool playerOn = CheckAABBOverlap(playerAABB, btn.triggerAABB);
+        bool ghostOn = ghost.HasActiveGhost() && CheckAABBOverlap(ghostAABB, btn.triggerAABB);
+        btn.isPressed = playerOn || ghostOn;
+
+        if (btn.isPressed) {
+            btn.currentTimer = btn.duration;
+            btn.isActive = true;
+        } else if (btn.currentTimer > 0.0f) {
+            btn.currentTimer -= dt;
+            btn.isActive = (btn.currentTimer > 0.0f);
+        } else {
+            btn.isActive = false;
+        }
+    }
+
+    for (auto& dr : doors) {
+        bool shouldOpen = false;
+        for (const auto& btn : buttons) {
+            if (btn.id == dr.id && btn.isActive) {
+                shouldOpen = true;
+                break;
+            }
+        }
+        dr.isOpen = shouldOpen;
+    }
+
+    // 8. Kill Plane
     if (player.position.y < killY) {
         deaths++;
         player.deathCount = deaths;
@@ -425,7 +605,7 @@ void Level::Update(float dt, Player& player) {
         return;
     }
 
-    // 7. Check Checkpoints
+    // 9. Checkpoints
     playerAABB = player.GetAABB();
     for (auto& cp : checkpoints) {
         if (!cp.activated && CheckAABBOverlap(playerAABB, cp.triggerAABB)) {
@@ -436,7 +616,7 @@ void Level::Update(float dt, Player& player) {
         }
     }
 
-    // 8. Check Finish Zone
+    // 10. Finish Zone
     if (hasFinish && !isCompleted) {
         if (CheckAABBOverlap(playerAABB, finish.triggerAABB)) {
             isCompleted = true;
@@ -454,29 +634,27 @@ void Level::Update(float dt, Player& player) {
 
 std::vector<AABB> Level::GetSolidColliders() const {
     std::vector<AABB> solids;
-    solids.reserve(boxes.size() + checkpoints.size() + movers.size() + crumbleTiles.size() + bouncePads.size());
+    solids.reserve(boxes.size() + checkpoints.size() + movers.size() +
+                   crumbleTiles.size() + bouncePads.size() + buttons.size() + doors.size());
 
-    // Static boxes
-    for (const auto& b : boxes) {
-        solids.push_back(b.aabb);
-    }
-    // Checkpoint pads
+    for (const auto& b : boxes) solids.push_back(b.aabb);
     for (const auto& cp : checkpoints) {
         solids.push_back(AABB::FromCenterSize(Vector3{ cp.position.x, cp.position.y - 0.25f, cp.position.z }, Vector3{ 3.0f, 0.5f, 3.0f }));
     }
-    // Movers
-    for (const auto& m : movers) {
-        solids.push_back(m.GetAABB());
-    }
-    // Crumble tiles (only when solid)
+    for (const auto& m : movers) solids.push_back(m.GetAABB());
     for (const auto& c : crumbleTiles) {
-        if (c.IsSolid()) {
-            solids.push_back(c.GetAABB());
-        }
+        if (c.IsSolid()) solids.push_back(c.GetAABB());
     }
-    // Bounce pads (solid landing surface)
-    for (const auto& bp : bouncePads) {
-        solids.push_back(bp.aabb);
+    for (const auto& bp : bouncePads) solids.push_back(bp.aabb);
+
+    // Button base plates
+    for (const auto& btn : buttons) solids.push_back(btn.baseAABB);
+
+    // Doors: only solid when CLOSED
+    for (const auto& dr : doors) {
+        if (!dr.isOpen) {
+            solids.push_back(dr.aabb);
+        }
     }
 
     return solids;
@@ -516,18 +694,15 @@ void Level::Draw() const {
         Color wireColor = DarkenColor(faceColor, 0.6f);
         DrawCube(m.currentPos, m.size.x, m.size.y, m.size.z, faceColor);
         DrawCubeWires(m.currentPos, m.size.x + 0.03f, m.size.y + 0.03f, m.size.z + 0.03f, wireColor);
-        // Small center accent to indicate moving platform
         DrawCube(Vector3{ m.currentPos.x, m.currentPos.y + m.size.y * 0.51f, m.currentPos.z },
                  m.size.x * 0.4f, 0.05f, m.size.z * 0.4f, pal.accent);
     }
 
     // 3. Spinners
     for (const auto& s : spinners) {
-        // Central column
         DrawCube(s.center, 0.6f, s.height, 0.6f, Color{ 60, 65, 75, 255 });
         DrawCubeWires(s.center, 0.62f, s.height + 0.02f, 0.62f, Color{ 35, 40, 50, 255 });
 
-        // Rotating hazard bar
         rlPushMatrix();
         rlTranslatef(s.center.x, s.center.y, s.center.z);
         rlRotatef(s.currentAngle * RAD2DEG, 0.0f, 1.0f, 0.0f);
@@ -543,17 +718,14 @@ void Level::Draw() const {
             DrawCube(c.currentPos, c.size.x, c.size.y, c.size.z, cColor);
             DrawCubeWires(c.currentPos, c.size.x + 0.02f, c.size.y + 0.02f, c.size.z + 0.02f, DarkenColor(cColor, 0.6f));
         } else {
-            // Draw faint ghost outline while fallen
             DrawCubeWires(c.basePos, c.size.x, c.size.y, c.size.z, Color{ 150, 150, 160, 60 });
         }
     }
 
     // 5. Spikes
     for (const auto& sp : spikesList) {
-        // Base plate
         DrawCube(Vector3{ sp.center.x, sp.center.y - sp.size.y * 0.4f, sp.center.z },
                  sp.size.x, sp.size.y * 0.2f, sp.size.z, Color{ 50, 50, 60, 255 });
-        // Hazard spikes drawn as small block pyramids
         int countX = std::max(1, static_cast<int>(sp.size.x / 1.0f));
         int countZ = std::max(1, static_cast<int>(sp.size.z / 1.0f));
         float stepX = sp.size.x / countX;
@@ -573,12 +745,59 @@ void Level::Draw() const {
     for (const auto& bp : bouncePads) {
         DrawCube(bp.center, bp.size.x, bp.size.y, bp.size.z, Color{ 250, 220, 50, 255 });
         DrawCubeWires(bp.center, bp.size.x + 0.03f, bp.size.y + 0.03f, bp.size.z + 0.03f, Color{ 200, 160, 20, 255 });
-        // Center spring indicator
         Vector3 springPos = { bp.center.x, bp.center.y + bp.size.y * 0.52f, bp.center.z };
         DrawCube(springPos, bp.size.x * 0.5f, 0.06f, bp.size.z * 0.5f, Color{ 255, 60, 160, 255 });
     }
 
-    // 7. Checkpoints
+    // 7. Buttons (Milestone 6)
+    for (const auto& btn : buttons) {
+        // Base rim
+        DrawCube(btn.baseAABB.GetCenter(), 2.3f, 0.3f, 2.3f, Color{ 55, 60, 70, 255 });
+        DrawCubeWires(btn.baseAABB.GetCenter(), 2.32f, 0.32f, 2.32f, Color{ 35, 40, 50, 255 });
+
+        // Depress plate if active
+        float plateY = btn.position.y + (btn.isActive ? 0.02f : 0.12f);
+        Color btnCol = btn.isActive ? Color{ 60, 240, 120, 255 } : Color{ 245, 140, 40, 255 };
+        DrawCube(Vector3{ btn.position.x, plateY, btn.position.z }, 1.8f, 0.2f, 1.8f, btnCol);
+        DrawCubeWires(Vector3{ btn.position.x, plateY, btn.position.z }, 1.82f, 0.22f, 1.82f, DarkenColor(btnCol, 0.6f));
+
+        // Visible Countdown Ring around the button
+        if (btn.isActive && btn.duration > 0.0f) {
+            float ratio = std::clamp(btn.currentTimer / btn.duration, 0.0f, 1.0f);
+            int segments = 16;
+            int litSegments = static_cast<int>(ratio * segments);
+            float ringRadius = 1.6f;
+            for (int i = 0; i < litSegments; ++i) {
+                float a = (2.0f * PI * i) / segments;
+                Vector3 dotPos = {
+                    btn.position.x + cosf(a) * ringRadius,
+                    btn.position.y + 0.04f,
+                    btn.position.z + sinf(a) * ringRadius
+                };
+                DrawCube(dotPos, 0.2f, 0.06f, 0.2f, Color{ 80, 255, 150, 240 });
+            }
+        }
+    }
+
+    // 8. Doors (Milestone 6)
+    for (const auto& dr : doors) {
+        if (!dr.isOpen) {
+            // Closed: Solid barrier with caution pattern
+            DrawCube(dr.center, dr.size.x, dr.size.y, dr.size.z, Color{ 175, 55, 65, 255 });
+            DrawCubeWires(dr.center, dr.size.x + 0.02f, dr.size.y + 0.02f, dr.size.z + 0.02f, Color{ 235, 90, 100, 255 });
+            // Center lock icon
+            DrawCube(dr.center, 0.6f, 0.6f, dr.size.z + 0.08f, Color{ 255, 220, 60, 255 });
+        } else {
+            // Open: Holographic doorway frame with green glow
+            DrawCubeWires(dr.center, dr.size.x, dr.size.y, dr.size.z, Color{ 70, 240, 150, 180 });
+            DrawCube(dr.center, dr.size.x, dr.size.y, dr.size.z, Color{ 60, 240, 140, 40 });
+        }
+    }
+
+    // 9. Ghost Clone (Milestone 6)
+    ghost.Draw();
+
+    // 10. Checkpoints
     for (const auto& cp : checkpoints) {
         Vector3 padCenter = { cp.position.x, cp.position.y - 0.25f, cp.position.z };
         Color padColor = cp.activated ? Color{ 80, 220, 100, 255 } : Color{ 180, 180, 190, 255 };
@@ -594,7 +813,7 @@ void Level::Draw() const {
         DrawCubeWires(flagCenter, 0.72f, 0.52f, 0.07f, DarkenColor(flagColor, 0.6f));
     }
 
-    // 8. Finish zone
+    // 11. Finish zone
     if (hasFinish) {
         Vector3 fCenter = finish.triggerAABB.GetCenter();
         Vector3 fSize = finish.triggerAABB.GetSize();

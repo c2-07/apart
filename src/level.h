@@ -74,6 +74,62 @@ struct BouncePad {
     AABB aabb;
 };
 
+// Milestone 6: Solo Cooperative Puzzles
+struct ButtonEntity {
+    int id;
+    Vector3 position;
+    float duration;
+    float currentTimer;
+    bool isPressed;
+    bool isActive;
+    AABB triggerAABB;
+    AABB baseAABB;
+};
+
+struct DoorEntity {
+    int id;
+    Vector3 center;
+    Vector3 size;
+    AABB aabb;
+    bool isOpen;
+};
+
+struct GhostFrame {
+    Vector3 position;
+    float yaw;
+    bool isGrounded;
+};
+
+class GhostRecorder {
+public:
+    enum class State {
+        IDLE,
+        RECORDING,
+        PLAYING
+    };
+
+    State state;
+    std::vector<GhostFrame> frames;
+    size_t playbackIndex;
+    float recordTimer;
+    static constexpr float MAX_RECORD_TIME = 20.0f;
+
+    GhostRecorder();
+    void StartRecording();
+    void StopRecording();
+    void StartPlayback();
+    void Reset();
+
+    void RecordTick(Vector3 pos, float yaw, bool grounded);
+    void UpdatePlayback();
+
+    Vector3 GetCurrentPos() const;
+    float GetCurrentYaw() const;
+    bool HasActiveGhost() const;
+    AABB GetAABB() const;
+    void Draw() const;
+};
+
 struct WorldPalette {
     Color skyTop;
     Color skyBottom;
@@ -97,12 +153,16 @@ public:
     FinishZone finish;
     bool hasFinish;
 
-    // Milestone 4: Moving entities and hazards
     std::vector<Mover> movers;
     std::vector<Spinner> spinners;
     std::vector<CrumbleTile> crumbleTiles;
     std::vector<Spikes> spikesList;
     std::vector<BouncePad> bouncePads;
+
+    // Milestone 6: Buttons and Doors
+    std::vector<ButtonEntity> buttons;
+    std::vector<DoorEntity> doors;
+    GhostRecorder ghost;
 
     // Runtime state
     float elapsedTime;
