@@ -65,8 +65,8 @@ void OrbitCamera::Update(Vector3 playerBasePos, float dt, const std::vector<AABB
     // Raycast against obstacles to pull in camera
     float desiredDist = targetDistance;
     float hitDist = 0.0f;
-    if (RaycastScene(targetPos, camDir, targetDistance, obstacles, &hitDist)) {
-        float pullInDist = std::max(0.8f, hitDist - Constants::CAM_OBSTACLE_MARGIN);
+    if (RaycastScene(targetPos, camDir, 0.5f, targetDistance, obstacles, &hitDist)) {
+        float pullInDist = std::max(1.0f, hitDist - Constants::CAM_OBSTACLE_MARGIN);
         desiredDist = std::min(desiredDist, pullInDist);
     }
 

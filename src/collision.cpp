@@ -1,7 +1,6 @@
 #include "collision.h"
 #include <cmath>
 #include <algorithm>
-#include <limits>
 
 Vector3 AABB::GetCenter() const {
     return Vector3{
@@ -16,6 +15,14 @@ Vector3 AABB::GetExtents() const {
         (max.x - min.x) * 0.5f,
         (max.y - min.y) * 0.5f,
         (max.z - min.z) * 0.5f
+    };
+}
+
+Vector3 AABB::GetSize() const {
+    return Vector3{
+        max.x - min.x,
+        max.y - min.y,
+        max.z - min.z
     };
 }
 
@@ -40,11 +47,11 @@ bool CheckAABBOverlap(const AABB& a, const AABB& b) {
            (a.min.z <= b.max.z && a.max.z >= b.min.z);
 }
 
-bool RaycastAABB(Vector3 origin, Vector3 direction, float maxDist, const AABB& box, float* outDist) {
-    float tMin = 0.0f;
+bool RaycastAABB(Vector3 origin, Vector3 direction, float minDist, float maxDist, const AABB& box, float* outDist) {
+    float tMin = minDist;
     float tMax = maxDist;
 
-    // Check X axis
+    // X axis
     if (std::abs(direction.x) < 1e-6f) {
         if (origin.x < box.min.x || origin.x > box.max.x) return false;
     } else {
@@ -57,7 +64,7 @@ bool RaycastAABB(Vector3 origin, Vector3 direction, float maxDist, const AABB& b
         if (tMin > tMax) return false;
     }
 
-    // Check Y axis
+    // Y axis
     if (std::abs(direction.y) < 1e-6f) {
         if (origin.y < box.min.y || origin.y > box.max.y) return false;
     } else {
@@ -70,7 +77,7 @@ bool RaycastAABB(Vector3 origin, Vector3 direction, float maxDist, const AABB& b
         if (tMin > tMax) return false;
     }
 
-    // Check Z axis
+    // Z axis
     if (std::abs(direction.z) < 1e-6f) {
         if (origin.z < box.min.z || origin.z > box.max.z) return false;
     } else {
@@ -83,13 +90,7 @@ bool RaycastAABB(Vector3 origin, Vector3 direction, float maxDist, const AABB& b
         if (tMin > tMax) return false;
     }
 
-    if (tMin < 0.0f) {
-        // Ray started inside box or box is behind
-        tMin = tMax;
-        if (tMin < 0.0f) return false;
-    }
-
-    if (tMin <= maxDist) {
+    if (tMin <= maxDist && tMin >= minDist) {
         if (outDist) *outDist = tMin;
         return true;
     }
@@ -97,12 +98,12 @@ bool RaycastAABB(Vector3 origin, Vector3 direction, float maxDist, const AABB& b
     return false;
 }
 
-bool RaycastScene(Vector3 origin, Vector3 direction, float maxDist, const std::vector<AABB>& boxes, float* outDist) {
+bool RaycastScene(Vector3 origin, Vector3 direction, float minDist, float maxDist, const std::vector<AABB>& boxes, float* outDist) {
     float closest = maxDist;
     bool hit = false;
     for (const auto& box : boxes) {
         float dist = 0.0f;
-        if (RaycastAABB(origin, direction, closest, box, &dist)) {
+        if (RaycastAABB(origin, direction, minDist, closest, box, &dist)) {
             if (dist < closest) {
                 closest = dist;
                 hit = true;

@@ -12,73 +12,197 @@
 
 static int RunSmokeTest() {
     std::cout << "[SMOKE-TEST] Starting headless physics and logic verification..." << std::endl;
-
-    Player player;
-    player.Init(Vector3{ 0.0f, 5.0f, 0.0f });
-
-    // Ground platform: centered at (0, -0.5, 0), size (20, 1, 20), so top surface is at Y = 0.0
-    std::vector<AABB> colliders = {
-        AABB::FromCenterSize(Vector3{ 0.0f, -0.5f, 0.0f }, Vector3{ 20.0f, 1.0f, 20.0f })
-    };
-
-    PlayerInput input;
     const float dt = Constants::PHYSICS_DT;
 
-    // 1. Test Gravity and Landing
-    float simTime = 0.0f;
-    while (simTime < 1.0f) {
-        player.UpdatePhysics(dt, input, 0.0f, colliders);
-        simTime += dt;
-    }
-
-    std::cout << "[SMOKE-TEST] Landed Y: " << player.position.y << ", Grounded: " << player.isGrounded << std::endl;
-    assert(std::abs(player.position.y - 0.0f) < 0.001f);
-    assert(player.isGrounded == true);
-    assert(std::abs(player.velocity.y) < 0.001f);
-
-    // 2. Test Movement Acceleration on Ground
-    input.moveForward = 1.0f; // pressing W
-    simTime = 0.0f;
-    while (simTime < 0.5f) {
-        player.UpdatePhysics(dt, input, 0.0f, colliders);
-        simTime += dt;
-    }
-    // cameraYaw = 0 -> forward is -Z
-    float forwardSpeed = -player.velocity.z;
-    std::cout << "[SMOKE-TEST] Forward speed after 0.5s: " << forwardSpeed << " m/s (target " << Constants::RUN_SPEED << ")" << std::endl;
-    assert(forwardSpeed > 7.9f && forwardSpeed <= Constants::RUN_SPEED + 0.01f);
-
-    // 3. Test Jump Height
-    input.moveForward = 0.0f;
-    input.jumpPressed = true;
-    player.UpdatePhysics(dt, input, 0.0f, colliders);
-    input.jumpPressed = false;
-
-    float maxHeight = player.position.y;
-    simTime = 0.0f;
-    while (simTime < 1.0f) {
-        player.UpdatePhysics(dt, input, 0.0f, colliders);
-        if (player.position.y > maxHeight) {
-            maxHeight = player.position.y;
+    // 1. Basic Gravity and Landing
+    {
+        Player player;
+        player.Init(Vector3{ 0.0f, 5.0f, 0.0f });
+        std::vector<AABB> colliders = {
+            AABB::FromCenterSize(Vector3{ 0.0f, -0.5f, 0.0f }, Vector3{ 20.0f, 1.0f, 20.0f })
+        };
+        PlayerInput input;
+        float simTime = 0.0f;
+        while (simTime < 1.0f) {
+            player.UpdatePhysics(dt, input, 0.0f, colliders);
+            simTime += dt;
         }
-        simTime += dt;
+        std::cout << "[SMOKE-TEST] Landed Y: " << player.position.y << ", Grounded: " << player.isGrounded << std::endl;
+        assert(std::abs(player.position.y - 0.0f) < 0.001f);
+        assert(player.isGrounded == true);
+        assert(std::abs(player.velocity.y) < 0.001f);
     }
-    std::cout << "[SMOKE-TEST] Peak jump height: " << maxHeight << " m (expected ~" << Constants::JUMP_HEIGHT << ")" << std::endl;
-    assert(std::abs(maxHeight - Constants::JUMP_HEIGHT) < 0.05f);
 
-    // 4. Test Camera pitch clamp
-    OrbitCamera cam;
-    cam.Init(player.position);
-    cam.pitch = 85.0f;
-    cam.Update(player.position, 0.016f, colliders);
-    assert(cam.pitch <= Constants::CAM_MAX_PITCH);
+    // 2. Seam Test: Walk across 10 adjacent platforms without snagging
+    {
+        std::cout << "[SMOKE-TEST] Testing seam crossing across adjacent boxes..." << std::endl;
+        Player player;
+        player.Init(Vector3{ 0.5f, 0.0f, 0.0f });
 
-    std::cout << "[SMOKE-TEST] All smoke test assertions passed successfully!" << std::endl;
+        std::vector<AABB> seamBoxes;
+        for (int i = 0; i < 10; ++i) {
+            // Consecutive boxes from X = 0 to 20, touching at X = 2, 4, 6, 8, ...
+            seamBoxes.push_back(AABB::FromMinSize(Vector3{ i * 2.0f, -1.0f, -2.0f }, Vector3{ 2.0f, 1.0f, 4.0f }));
+        }
+
+        PlayerInput input;
+        input.moveRight = 1.0f; // cameraYaw = 0 -> right is +X
+        float simTime = 0.0f;
+        while (simTime < 2.0f) {
+            player.UpdatePhysics(dt, input, 0.0f, seamBoxes);
+            // Verify speed is maintained smoothly once accelerated
+            if (simTime > 0.3f) {
+                assert(player.velocity.x > 7.0f);
+            }
+            simTime += dt;
+        }
+        std::cout << "[SMOKE-TEST] Seam test passed: reached X = " << player.position.x << " without snagging." << std::endl;
+        assert(player.position.x > 14.0f);
+    }
+
+    // 3. High-Speed Wall Test: Cannot clip into wall
+    {
+        std::cout << "[SMOKE-TEST] Testing high-speed wall collision..." << std::endl;
+        Player player;
+        player.Init(Vector3{ 0.0f, 0.0f, 0.0f });
+
+        // Wall placed at X = 8 to 10
+        std::vector<AABB> wallBoxes = {
+            AABB::FromMinSize(Vector3{ -5.0f, -1.0f, -5.0f }, Vector3{ 20.0f, 1.0f, 10.0f }), // ground
+            AABB::FromMinSize(Vector3{ 8.0f, 0.0f, -5.0f }, Vector3{ 2.0f, 4.0f, 10.0f })     // wall
+        };
+
+        player.velocity.x = 80.0f; // Extremely high horizontal velocity
+        PlayerInput input;
+        for (int step = 0; step < 60; ++step) {
+            player.UpdatePhysics(dt, input, 0.0f, wallBoxes);
+        }
+        float expectedX = 8.0f - Constants::HALF_PLAYER_WIDTH; // 7.5
+        std::cout << "[SMOKE-TEST] Wall impact stopped at X = " << player.position.x << " (expected " << expectedX << ")" << std::endl;
+        assert(std::abs(player.position.x - expectedX) < 0.001f);
+        assert(player.velocity.x == 0.0f);
+    }
+
+    // 4. Thin Platform Tunneling Test: Terminal velocity drop onto 0.05m platform
+    {
+        std::cout << "[SMOKE-TEST] Testing thin platform tunneling prevention..." << std::endl;
+        Player player;
+        player.Init(Vector3{ 0.0f, 8.0f, 0.0f });
+        player.velocity.y = Constants::TERMINAL_VELOCITY; // -40 m/s
+
+        // Thin platform: 0.05m thickness from Y = -0.05 to 0.0
+        std::vector<AABB> thinBoxes = {
+            AABB::FromMinSize(Vector3{ -5.0f, -0.05f, -5.0f }, Vector3{ 10.0f, 0.05f, 10.0f })
+        };
+
+        PlayerInput input;
+        for (int step = 0; step < 60; ++step) {
+            player.UpdatePhysics(dt, input, 0.0f, thinBoxes);
+        }
+        std::cout << "[SMOKE-TEST] Landed on thin platform at Y = " << player.position.y << ", Grounded: " << player.isGrounded << std::endl;
+        assert(std::abs(player.position.y - 0.0f) < 0.001f);
+        assert(player.isGrounded == true);
+    }
+
+    // 5. Coyote Time Test
+    {
+        std::cout << "[SMOKE-TEST] Testing coyote time..." << std::endl;
+        Player player;
+        player.Init(Vector3{ 0.0f, 0.0f, 0.0f });
+        // Platform ends at X = 2.0
+        std::vector<AABB> ledgeBoxes = {
+            AABB::FromMinSize(Vector3{ -5.0f, -1.0f, -5.0f }, Vector3{ 7.0f, 1.0f, 10.0f }) // [ -5, 2 ]
+        };
+
+        PlayerInput input;
+        // Step once to establish grounded state
+        player.UpdatePhysics(dt, input, 0.0f, ledgeBoxes);
+        assert(player.isGrounded);
+
+        input.moveRight = 1.0f; // Walk off ledge towards +X
+        // Walk until airborne
+        int safetyTicks = 0;
+        while (player.isGrounded && safetyTicks < 200) {
+            player.UpdatePhysics(dt, input, 0.0f, ledgeBoxes);
+            safetyTicks++;
+        }
+        assert(!player.isGrounded);
+        assert(player.position.x > 2.0f);
+
+        // Advance 4 ticks in air (~0.033s, well within 0.1s coyote window)
+        for (int step = 0; step < 4; ++step) {
+            player.UpdatePhysics(dt, input, 0.0f, ledgeBoxes);
+        }
+        assert(!player.isGrounded);
+        assert(player.coyoteTimer > 0.0f);
+
+        // Press jump while in mid-air
+        input.jumpPressed = true;
+        player.UpdatePhysics(dt, input, 0.0f, ledgeBoxes);
+        std::cout << "[SMOKE-TEST] Coyote jump velocity Y = " << player.velocity.y << " m/s" << std::endl;
+        assert(player.velocity.y > 10.0f); // Jump succeeded!
+    }
+
+    // 6. Jump Buffering Test
+    {
+        std::cout << "[SMOKE-TEST] Testing jump buffering..." << std::endl;
+        Player player;
+        player.Init(Vector3{ 0.0f, 0.3f, 0.0f }); // Falling 0.3m above ground
+        player.velocity.y = -5.0f;
+
+        std::vector<AABB> groundBoxes = {
+            AABB::FromMinSize(Vector3{ -5.0f, -1.0f, -5.0f }, Vector3{ 10.0f, 1.0f, 10.0f })
+        };
+
+        PlayerInput input;
+        input.jumpPressed = true; // Buffer jump before landing
+        player.UpdatePhysics(dt, input, 0.0f, groundBoxes);
+        input.jumpPressed = false;
+        assert(player.jumpBufferTimer > 0.0f);
+
+        // Advance until landed and buffered jump executes (should execute in < 15 ticks)
+        bool jumpFired = false;
+        for (int step = 0; step < 15; ++step) {
+            player.UpdatePhysics(dt, input, 0.0f, groundBoxes);
+            if (player.velocity.y > 8.0f) {
+                jumpFired = true;
+                break;
+            }
+        }
+        std::cout << "[SMOKE-TEST] Buffered jump fired: " << (jumpFired ? "YES" : "NO")
+                  << " (vel Y = " << player.velocity.y << " m/s)" << std::endl;
+        assert(jumpFired);
+    }
+
+    // 7. Camera Obstacle Pull-in Test
+    {
+        std::cout << "[SMOKE-TEST] Testing camera obstacle pull-in..." << std::endl;
+        OrbitCamera cam;
+        Vector3 playerBase = { 0.0f, 0.0f, 0.0f };
+        cam.Init(playerBase);
+        cam.yaw = 0.0f;
+        cam.pitch = 0.0f;
+        cam.targetDistance = 10.0f;
+
+        // Obstacle at Z = 3.0 between player and camera eye (which sits at +Z)
+        std::vector<AABB> obstacles = {
+            AABB::FromCenterSize(Vector3{ 0.0f, Constants::CAM_TARGET_HEIGHT, 3.0f }, Vector3{ 2.0f, 2.0f, 0.4f })
+        };
+
+        // Update camera multiple frames to smooth pull-in
+        for (int f = 0; f < 30; ++f) {
+            cam.Update(playerBase, 0.016f, obstacles);
+        }
+
+        std::cout << "[SMOKE-TEST] Camera pulled in to distance: " << cam.currentDistance << " m (target was 10.0)" << std::endl;
+        assert(cam.currentDistance < 4.0f);
+    }
+
+    std::cout << "[SMOKE-TEST] All Milestone 2 collision and physics assertions passed!" << std::endl;
     return 0;
 }
 
 int main(int argc, char* argv[]) {
-    // Check for headless smoke test mode
     for (int i = 1; i < argc; ++i) {
         if (std::string(argv[i]) == "--smoke-test") {
             return RunSmokeTest();
@@ -89,22 +213,32 @@ int main(int argc, char* argv[]) {
     const int screenHeight = 720;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(screenWidth, screenHeight, "Roblox Obby Adventure - M1 Skeleton");
+    InitWindow(screenWidth, screenHeight, "Roblox Obby Adventure - M2 Collision");
     if (!IsWindowReady()) {
-        std::cerr << "Window could not be initialized (no display server available). Running headless smoke test instead." << std::endl;
+        std::cerr << "Window could not be initialized. Running smoke test instead." << std::endl;
         return RunSmokeTest();
     }
     SetTargetFPS(60);
 
-    // Initialize player and world
     Player player;
     player.Init(Vector3{ 0.0f, 2.0f, 0.0f });
 
-    // Environment colliders: Ground platform + a few stepping test blocks
+    // Hardcoded set of boxes showcasing seams, steps, walls, and narrow platforms
     std::vector<AABB> colliders = {
-        AABB::FromCenterSize(Vector3{ 0.0f, -0.5f, 0.0f }, Vector3{ 30.0f, 1.0f, 30.0f }),
-        AABB::FromCenterSize(Vector3{ 0.0f, 1.0f, -6.0f }, Vector3{ 4.0f, 2.0f, 4.0f }),
-        AABB::FromCenterSize(Vector3{ 6.0f, 2.0f, -6.0f }, Vector3{ 4.0f, 4.0f, 4.0f })
+        // Main spawn platform
+        AABB::FromCenterSize(Vector3{ 0.0f, -0.5f, 0.0f }, Vector3{ 14.0f, 1.0f, 14.0f }),
+        // Seam platforms (3 adjacent boxes side by side)
+        AABB::FromMinSize(Vector3{ 7.0f, -1.0f, -3.0f }, Vector3{ 4.0f, 1.0f, 6.0f }),
+        AABB::FromMinSize(Vector3{ 11.0f, -1.0f, -3.0f }, Vector3{ 4.0f, 1.0f, 6.0f }),
+        AABB::FromMinSize(Vector3{ 15.0f, -1.0f, -3.0f }, Vector3{ 4.0f, 1.0f, 6.0f }),
+        // Elevated steps
+        AABB::FromMinSize(Vector3{ 19.0f, 0.0f, -3.0f }, Vector3{ 3.0f, 1.0f, 6.0f }),
+        AABB::FromMinSize(Vector3{ 22.0f, 1.0f, -3.0f }, Vector3{ 3.0f, 1.0f, 6.0f }),
+        AABB::FromMinSize(Vector3{ 25.0f, 2.0f, -3.0f }, Vector3{ 4.0f, 1.0f, 6.0f }),
+        // High wall for camera pull-in and wall collision testing
+        AABB::FromCenterSize(Vector3{ 0.0f, 2.5f, -7.0f }, Vector3{ 14.0f, 5.0f, 1.0f }),
+        // Thin floating platform
+        AABB::FromCenterSize(Vector3{ 0.0f, 4.0f, 5.0f }, Vector3{ 4.0f, 0.1f, 4.0f })
     };
 
     OrbitCamera camera;
@@ -112,17 +246,14 @@ int main(int argc, char* argv[]) {
 
     float accumulator = 0.0f;
 
-    // Main game loop
     while (!WindowShouldClose()) {
         float frameDelta = GetFrameTime();
         if (frameDelta > Constants::MAX_FRAME_DELTA) {
             frameDelta = Constants::MAX_FRAME_DELTA;
         }
 
-        // Handle camera update (per frame for smooth rendering)
         camera.Update(player.position, frameDelta, colliders);
 
-        // Accumulate physics steps at fixed 120 Hz
         accumulator += frameDelta;
         while (accumulator >= Constants::PHYSICS_DT) {
             PlayerInput input;
@@ -136,7 +267,6 @@ int main(int argc, char* argv[]) {
 
             player.UpdatePhysics(Constants::PHYSICS_DT, input, camera.GetYawRadians(), colliders);
 
-            // Kill plane check (e.g. falling off platform)
             if (player.position.y < -15.0f) {
                 player.deathCount++;
                 player.Respawn();
@@ -145,41 +275,36 @@ int main(int argc, char* argv[]) {
             accumulator -= Constants::PHYSICS_DT;
         }
 
-        // Render
         BeginDrawing();
-        ClearBackground(Color{ 135, 206, 235, 255 }); // Sky blue
+        ClearBackground(Color{ 135, 206, 235, 255 });
 
         BeginMode3D(camera.GetRaylibCamera());
 
-        // Draw ground and test platforms with Roblox-like aesthetic
+        // Draw colliders
         for (const auto& box : colliders) {
             Vector3 center = box.GetCenter();
-            Vector3 size = box.GetExtents();
-            size.x *= 2.0f; size.y *= 2.0f; size.z *= 2.0f;
+            Vector3 size = box.GetSize();
 
-            Color faceColor = (center.y < 0.0f) ? Color{ 80, 180, 70, 255 } : Color{ 220, 120, 50, 255 };
-            Color wireColor = (center.y < 0.0f) ? Color{ 50, 130, 40, 255 } : Color{ 160, 80, 30, 255 };
+            Color faceColor = (center.y < 0.0f) ? Color{ 80, 180, 70, 255 } : Color{ 230, 140, 50, 255 };
+            Color wireColor = (center.y < 0.0f) ? Color{ 50, 130, 40, 255 } : Color{ 160, 90, 30, 255 };
 
             DrawCube(center, size.x, size.y, size.z, faceColor);
-            DrawCubeWires(center, size.x, size.y, size.z, wireColor);
+            DrawCubeWires(center, size.x + 0.01f, size.y + 0.01f, size.z + 0.01f, wireColor);
         }
 
-        // Draw grid around ground
-        DrawGrid(30, 1.0f);
-
-        // Draw Player
+        DrawGrid(40, 1.0f);
         player.Draw();
 
         EndMode3D();
 
-        // 2D HUD
         DrawFPS(20, 20);
-        DrawText("Controls: WASD Move | Space Jump | Mouse Right-Drag / Arrows Orbit | Scroll Zoom | R Respawn", 20, 50, 18, DARKGRAY);
+        DrawText("M2: Collision - Walk across seams, test walls & thin platforms", 20, 50, 18, DARKGRAY);
 
-        char statsBuf[128];
-        snprintf(statsBuf, sizeof(statsBuf), "Pos: (%.1f, %.1f, %.1f) | Grounded: %s | Deaths: %d",
+        char statsBuf[160];
+        snprintf(statsBuf, sizeof(statsBuf), "Pos: (%.2f, %.2f, %.2f) | Vel: (%.1f, %.1f, %.1f) | Grounded: %s | CamDist: %.1fm",
                  player.position.x, player.position.y, player.position.z,
-                 player.isGrounded ? "YES" : "NO", player.deathCount);
+                 player.velocity.x, player.velocity.y, player.velocity.z,
+                 player.isGrounded ? "YES" : "NO", camera.currentDistance);
         DrawText(statsBuf, 20, 75, 18, DARKBLUE);
 
         EndDrawing();

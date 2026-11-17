@@ -34,3 +34,16 @@ cmake --build build
   - Camera-relative movement: W moves away from camera eye along ground plane, S towards camera, A/D strafe.
   - Ray-AABB intersection: implemented using Kay & Kajiya slab method with axis-aligned bounding boxes.
   - Per-axis collision: tested with a tolerance skin (1 cm) to prevent edge snagging when walking across adjacent surfaces.
+
+### Milestone 2: Collision
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - Robust per-axis AABB resolution (X, then Z, then Y) with substepping (max 0.04m micro-steps).
+  - Tolerance skin margin (0.01m) on orthogonal axes to completely eliminate edge snagging when crossing seams between adjacent boxes.
+  - Tunneling prevention against high speeds (tested at terminal velocity -40 m/s against 0.05m thin platforms).
+  - High-speed wall collision stopping (tested at 80 m/s without clipping through).
+  - Coyote time window (0.1s) allowing jump inputs shortly after walking off ledges.
+  - Jump buffering window (0.1s) triggering jumps immediately upon touching down.
+  - Camera collision pull-in using ray-vs-AABB sweep against scene geometry with smooth pull-in and obstacle clearance margin (0.25m).
+  - Comprehensive headless unit tests in `--smoke-test` asserting all collision and control criteria.
+
