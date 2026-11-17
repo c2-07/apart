@@ -9,9 +9,11 @@
 #include "audio.h"
 #include "particle.h"
 #include "validator.h"
+#include "game_state.h"
 
 #include <string>
 #include <vector>
+#include <memory>
 
 enum class AppState {
     MAIN_MENU,
@@ -42,7 +44,13 @@ struct SaveData {
     bool Save(const std::string& path = "savegame.txt") const;
 };
 
+namespace obby {
+
 class Game {
+private:
+    std::unique_ptr<GameState> m_currentState;
+    std::unique_ptr<GameState> m_pendingState;
+
 public:
     AppState state;
     AppState previousState; // For returning from settings
@@ -75,35 +83,33 @@ public:
     int fogDensityLoc;
 
     Game();
+    ~Game() = default;
+
+    // Non-copyable context
+    Game(const Game&) = delete;
+    Game& operator=(const Game&) = delete;
+
     void Init();
     void Shutdown();
-    void ApplyLightingShader(Vector3 eyePos, int worldId);
+    void ApplyLightingShader(Vector3 eyePos, int worldId) const;
 
     void Update(float frameDelta);
-    void Draw();
+    void Draw() const;
 
     void LoadLevelByIndex(int index);
     void CompleteLevel();
+    int GetTotalLevels() const { return 20; }
 
-private:
-    void UpdateMainMenu();
-    void DrawMainMenu();
+    // State Pattern dispatch & transition management
+    void RequestStateChange(StateType newType);
+    void ChangeState(std::unique_ptr<GameState> newState);
+    std::unique_ptr<GameState> CreateState(StateType type);
+    GameState* GetCurrentState() const { return m_currentState.get(); }
 
-    void UpdateLevelSelect();
-    void DrawLevelSelect();
-
-    void UpdateCharacterSelect();
-    void DrawCharacterSelect();
-
-    void UpdateSettings();
-    void DrawSettings();
-
-    void UpdatePlaying(float frameDelta);
-    void DrawPlaying();
-
-    void UpdatePaused();
-    void DrawPaused();
-
-    void UpdateResults();
-    void DrawResults();
+    // Rendering helper for sub-states (PauseState, ResultsState)
+    void DrawPlaying() const;
 };
+
+} // namespace obby
+
+using Game = obby::Game;

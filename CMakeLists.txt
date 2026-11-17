@@ -39,6 +39,13 @@ add_executable(obby
     src/ghost_recorder.cpp
     src/camera_controller.cpp
     src/player_animator.cpp
+    src/menu_state.cpp
+    src/level_select_state.cpp
+    src/character_select_state.cpp
+    src/settings_state.cpp
+    src/play_state.cpp
+    src/pause_state.cpp
+    src/results_state.cpp
     src/game.cpp
     src/collision.cpp
     src/camera.cpp

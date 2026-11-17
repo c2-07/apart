@@ -304,12 +304,26 @@ cmake --build build
   - Verified 100% test pass on headless smoke tests and all 20 levels in the reachability validator.
 
 #### Step 4: Encapsulated Player, PlayerAnimator & CameraController
-- **Status:** COMPLETED
+- **Status:** COMPLETED (Commit: `8673dc2`)
 - **Details:**
   - Encapsulated `Player` class with private state members (`m_position`, `m_velocity`, `m_modelYaw`, `m_isGrounded`, `m_coyoteTimer`, `m_jumpBufferTimer`, `m_deathCount`, etc.) and public accessor/mutator interfaces (`getPosition()`, `setPosition()`, `getVelocity()`, `setVelocity()`, `jump()`, `applyImpulse()`, `respawn()`, `getBounds()`).
   - Extracted procedural character animation, limb kinematics, squash-and-stretch, lean dynamics, and contact blob shadow projection into a dedicated `PlayerAnimator` class (`src/player_animator.h/.cpp`).
   - Refactored `OrbitCamera` into an encapsulated `CameraController` class (`src/camera_controller.h/.cpp`) managing spherical orbit trigonometry, target smoothing, movement lookahead, dynamic velocity-proportional FOV, and obstacle raycast occlusion pull-in.
   - Updated all entity interactions and test assertions to use clean accessor and mutator methods. Passed all headless smoke tests and level reachability suites.
+
+#### Step 5: GameState Polymorphism & State Pattern Architecture
+- **Status:** COMPLETED
+- **Details:**
+  - Implemented abstract base class `GameState` (`src/game_state.h`) with pure virtual `handleInput()`, `update(float dt)`, `draw() const`, and virtual lifecycle hooks `enter()` and `exit()`.
+  - Created 7 derived concrete state classes, each in its own header and source file:
+    - `MenuState`: Main menu handling camera rotation and main navigation.
+    - `LevelSelectState`: 4-world level selection grid with best times and stars.
+    - `CharacterSelectState`: 3D player preview and color swatch customization.
+    - `SettingsState`: Audio volume, mouse sensitivity, pitch inversion, and fullscreen toggles.
+    - `PlayState`: Active gameplay loop with 120Hz physics substepping and HUD overlay.
+    - `PauseState`: Modal dialog for resume, restart, settings, and quit options.
+    - `ResultsState`: Victory screen displaying time, deaths, and star evaluation.
+  - Refactored `Game` context class to own `std::unique_ptr<GameState> m_currentState`, eliminating monolithic switch statements from the core loop and managing transitions via deferred state requests.
 
 
 
