@@ -1,33 +1,42 @@
 #pragma once
 #include "raylib.h"
 #include "collision.h"
+#include "particle.h"
 #include <vector>
 
 struct PlayerInput {
-    float moveForward = 0.0f;   // +1 forward (W), -1 backward (S)
-    float moveRight = 0.0f;     // +1 right (D), -1 left (A)
+    float moveForward = 0.0f;
+    float moveRight = 0.0f;
     bool jumpPressed = false;
     bool jumpHeld = false;
     bool respawnPressed = false;
 };
 
 struct Player {
-    Vector3 position;           // Feet center
+    Vector3 position;
     Vector3 velocity;
-    float modelYaw;             // Current facing yaw (radians)
-    float targetYaw;            // Target facing yaw (radians)
+    float modelYaw;
+    float targetYaw;
 
     bool isGrounded;
-    float coyoteTimer;          // Seconds remaining for coyote jump
-    float jumpBufferTimer;      // Seconds remaining for buffered jump
+    bool wasGrounded;
+    float coyoteTimer;
+    float jumpBufferTimer;
 
     int deathCount;
     bool isAlive;
     Vector3 spawnPoint;
 
+    // Animation & Visual State
+    float walkCycle;
+    int colorIndex; // 0: Classic Blue, 1: Crimson Red, 2: Emerald Green, 3: Royal Purple, 4: Sunset Orange, 5: Sunshine Yellow
+
     void Init(Vector3 spawn);
     void Respawn();
-    void UpdatePhysics(float dt, const PlayerInput& input, float cameraYaw, const std::vector<AABB>& colliders);
+    void UpdatePhysics(float dt, const PlayerInput& input, float cameraYaw,
+                       const std::vector<AABB>& colliders, ParticleSystem* particles = nullptr);
     void Draw() const;
+    void DrawShadow(const std::vector<AABB>& colliders) const;
     AABB GetAABB() const;
+    Color GetShirtColor() const;
 };

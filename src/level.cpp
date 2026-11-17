@@ -1,5 +1,6 @@
 #include "level.h"
 #include "constants.h"
+#include "audio.h"
 #include "raymath.h"
 #include "rlgl.h"
 
@@ -347,10 +348,10 @@ void Level::Update(float dt, Player& player) {
     for (auto& s : spinners) {
         s.currentAngle += s.speed * dt;
         if (s.CheckOverlapWithPlayer(player.GetAABB())) {
-            // Spinner hazard kills player on touch
             deaths++;
             player.deathCount = deaths;
             player.Respawn();
+            AudioManager::Play(SoundId::DEATH);
             return;
         }
     }
@@ -399,17 +400,18 @@ void Level::Update(float dt, Player& player) {
             deaths++;
             player.deathCount = deaths;
             player.Respawn();
+            AudioManager::Play(SoundId::DEATH);
             return;
         }
     }
 
     // 5. Check Bounce Pads
     for (const auto& bp : bouncePads) {
-        // Player lands on or touches bounce pad
         if (CheckAABBOverlap(player.GetAABB(), bp.aabb)) {
             if (player.velocity.y <= 1.0f) {
                 player.velocity.y = bp.strength;
                 player.isGrounded = false;
+                AudioManager::Play(SoundId::JUMP);
             }
         }
     }
@@ -419,6 +421,7 @@ void Level::Update(float dt, Player& player) {
         deaths++;
         player.deathCount = deaths;
         player.Respawn();
+        AudioManager::Play(SoundId::DEATH);
         return;
     }
 
@@ -429,6 +432,7 @@ void Level::Update(float dt, Player& player) {
             cp.activated = true;
             player.spawnPoint = cp.position;
             checkpointsActivated++;
+            AudioManager::Play(SoundId::CHECKPOINT);
         }
     }
 
@@ -436,6 +440,7 @@ void Level::Update(float dt, Player& player) {
     if (hasFinish && !isCompleted) {
         if (CheckAABBOverlap(playerAABB, finish.triggerAABB)) {
             isCompleted = true;
+            AudioManager::Play(SoundId::FINISH);
             if (elapsedTime <= parTime && deaths == 0) {
                 starRating = 3;
             } else if (elapsedTime <= parTime * 1.4f) {

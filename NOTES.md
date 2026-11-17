@@ -69,5 +69,18 @@ cmake --build build
   - Bounce pads (`bounce`): launch pads with customizable impulse strength propelling the player upward into high arcs.
   - Automated smoke tests verifying mover carrying with zero relative drift, spinner sweep detection, crumble state lifecycle, spike collision, and bounce pad velocity.
 
+### Milestone 5: Character & Polish
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - Full cube-built character assembled from 6 primary body segments (head, torso, 2 arms, 2 legs) with face eyes and smile.
+  - Procedural animations: running walk cycle with swinging limbs and torso bobbing, idle breathing, and jumping/falling airborne poses.
+  - Character customization with 6 selectable shirt colors (Classic Blue, Crimson Red, Emerald Green, Royal Purple, Sunset Orange, Sunshine Yellow).
+  - Soft fake drop shadow projected dynamically onto the nearest surface below via downward raycast.
+  - 3D cube particle puff system emitting on jumps and hard landings.
+  - Screen shake feedback and dark red respawn fade on death.
+  - Procedural sound effect synthesizer using raylib `Wave` API (jump chirp, landing thud, checkpoint chime, death buzz, victory fanfare) with no external audio assets needed.
+  - Interactive master volume slider control on the HUD.
+
+
 
 

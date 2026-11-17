@@ -26,6 +26,8 @@ add_executable(obby
     src/player.cpp
     src/level.cpp
     src/ui.cpp
+    src/audio.cpp
+    src/particle.cpp
 )
 
 target_include_directories(obby PRIVATE

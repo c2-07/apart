@@ -1,7 +1,45 @@
 #include "ui.h"
+#include "audio.h"
 #include <cstdio>
+#include <algorithm>
 
 namespace UI {
+
+void DrawVolumeControl(int posX, int posY, float width) {
+    float curVol = AudioManager::GetVolume();
+    Rectangle sliderBar = { (float)posX, (float)(posY + 8), width, 8 };
+    Rectangle sliderHandle = { (float)(posX + curVol * width - 6), (float)(posY + 2), 12, 20 };
+
+    Vector2 mouse = GetMousePosition();
+    bool hovering = CheckCollisionPointRec(mouse, Rectangle{ (float)posX, (float)posY, width, 24 });
+    static bool dragging = false;
+
+    if (hovering && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        dragging = true;
+    }
+    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+        dragging = false;
+    }
+
+    if (dragging) {
+        float newVol = (mouse.x - posX) / width;
+        newVol = std::clamp(newVol, 0.0f, 1.0f);
+        AudioManager::SetVolume(newVol);
+        curVol = newVol;
+    }
+
+    // Draw background track
+    DrawRectangleRounded(sliderBar, 0.5f, 4, Color{ 50, 60, 75, 220 });
+    // Draw filled track
+    Rectangle filledBar = { (float)posX, (float)(posY + 8), width * curVol, 8 };
+    DrawRectangleRounded(filledBar, 0.5f, 4, Color{ 80, 180, 240, 255 });
+    // Draw handle
+    DrawRectangleRounded(sliderHandle, 0.4f, 4, (dragging || hovering) ? Color{ 255, 255, 255, 255 } : Color{ 200, 215, 235, 255 });
+
+    char volText[32];
+    snprintf(volText, sizeof(volText), "Vol: %d%%", static_cast<int>(curVol * 100.0f));
+    DrawText(volText, posX + (int)width + 12, posY + 4, 15, Color{ 220, 230, 245, 240 });
+}
 
 void DrawHUD(const std::string& levelName, float timer, float parTime, int checkpoints, int totalCheckpoints, int deaths) {
     // Top-left HUD panel

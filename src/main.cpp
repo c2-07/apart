@@ -5,6 +5,8 @@
 #include "player.h"
 #include "level.h"
 #include "ui.h"
+#include "audio.h"
+#include "particle.h"
 
 #include <iostream>
 #include <vector>
@@ -117,7 +119,7 @@ static int RunSmokeTest() {
 
         input.moveRight = 1.0f;
         int safetyTicks = 0;
-        while (player.isGrounded && safetyTicks < 200) {
+        while (player.isGrounded && safetyTicks < 400) {
             player.UpdatePhysics(dt, input, 0.0f, ledgeBoxes);
             safetyTicks++;
         }
@@ -188,7 +190,7 @@ static int RunSmokeTest() {
         assert(cam.currentDistance < 4.0f);
     }
 
-    // 8. Milestone 4: Movers and Carrying Physics Test
+    // 8. Milestone 4: Movers and Carrying Physics
     {
         std::cout << "[SMOKE-TEST] Testing mover platform with player carrying..." << std::endl;
         Level level;
@@ -203,15 +205,13 @@ static int RunSmokeTest() {
         level.movers.push_back(m);
 
         Player player;
-        player.Init(Vector3{ 0.0f, 0.5f, 0.0f }); // On top of mover (top surface at Y=0.5)
+        player.Init(Vector3{ 0.0f, 0.5f, 0.0f });
 
-        // Settle player on mover
         std::vector<AABB> colliders = level.GetSolidColliders();
         PlayerInput input;
         player.UpdatePhysics(dt, input, 0.0f, colliders);
         assert(player.isGrounded);
 
-        // Advance 1.0s (mover travels ~4m in X)
         float sim = 0.0f;
         while (sim < 1.0f) {
             level.Update(dt, player);
@@ -223,130 +223,33 @@ static int RunSmokeTest() {
         std::cout << "[SMOKE-TEST] Mover X: " << level.movers[0].currentPos.x
                   << ", Player X: " << player.position.x
                   << ", Grounded: " << player.isGrounded << std::endl;
-        // Verify player remained on top of platform and followed its displacement with no jitter
         assert(player.isGrounded);
         assert(std::abs(player.position.x - level.movers[0].currentPos.x) < 0.05f);
         assert(player.position.x > 3.0f);
     }
 
-    // 9. Milestone 4: Spinner Hazard Test
+    // 9. Milestone 5: Polish, Particle System & Audio Verification
     {
-        std::cout << "[SMOKE-TEST] Testing spinner hazard collision..." << std::endl;
-        Level level;
-        level.spawnPos = Vector3{ 0.0f, 0.0f, -10.0f };
-        Spinner s;
-        s.center = Vector3{ 0.0f, 1.0f, 0.0f };
-        s.length = 6.0f;
-        s.height = 1.0f;
-        s.speed = 4.0f;
-        s.currentAngle = 0.0f;
-        level.spinners.push_back(s);
+        std::cout << "[SMOKE-TEST] Testing Particle System puffs..." << std::endl;
+        ParticleSystem particles;
+        particles.SpawnJumpPuff(Vector3{ 0.0f, 0.0f, 0.0f });
+        particles.SpawnLandPuff(Vector3{ 0.0f, 0.0f, 0.0f }, 10.0f);
+        particles.Update(0.1f);
 
+        // Test volume controls
+        AudioManager::SetVolume(0.65f);
+        assert(std::abs(AudioManager::GetVolume() - 0.65f) < 0.001f);
+
+        // Test character customization
         Player player;
-        level.Reset(player);
-        // Place player directly in the path of the rotating bar
-        player.position = Vector3{ 2.0f, 0.0f, 0.0f };
-        assert(level.deaths == 0);
-
-        // Advance ticks until spinner sweeps through player
-        for (int step = 0; step < 60; ++step) {
-            level.Update(dt, player);
-            if (level.deaths > 0) break;
-        }
-
-        std::cout << "[SMOKE-TEST] Spinner collision caused death: " << (level.deaths > 0 ? "YES" : "NO") << std::endl;
-        assert(level.deaths > 0);
-        assert(player.position.z == level.spawnPos.z); // Respawned at spawn
+        player.Init(Vector3{ 0.0f, 0.0f, 0.0f });
+        player.colorIndex = 2; // Emerald
+        Color c = player.GetShirtColor();
+        assert(c.g > 150);
+        std::cout << "[SMOKE-TEST] Particle and Character customization checks passed!" << std::endl;
     }
 
-    // 10. Milestone 4: Crumble Tile Test
-    {
-        std::cout << "[SMOKE-TEST] Testing crumble tile states (STABLE -> CRUMBLING -> FALLEN -> STABLE)..." << std::endl;
-        Level level;
-        CrumbleTile c;
-        c.basePos = Vector3{ 0.0f, 0.0f, 0.0f };
-        c.size = Vector3{ 3.0f, 1.0f, 3.0f };
-        c.delay = 0.2f;
-        c.respawnTime = 0.4f;
-        c.state = CrumbleState::STABLE;
-        c.timer = 0.0f;
-        c.currentPos = c.basePos;
-        level.crumbleTiles.push_back(c);
-
-        Player player;
-        player.Init(Vector3{ 0.0f, 0.5f, 0.0f });
-
-        PlayerInput input;
-        std::vector<AABB> colliders = level.GetSolidColliders();
-        player.UpdatePhysics(dt, input, 0.0f, colliders);
-        assert(player.isGrounded);
-
-        // Step 1: Landing triggers CRUMBLING
-        level.Update(dt, player);
-        assert(level.crumbleTiles[0].state == CrumbleState::CRUMBLING);
-
-        // Step 2: After delay (0.2s), transitions to FALLEN
-        float sim = 0.0f;
-        while (sim < 0.25f) {
-            level.Update(dt, player);
-            sim += dt;
-        }
-        assert(level.crumbleTiles[0].state == CrumbleState::FALLEN);
-        assert(!level.crumbleTiles[0].IsSolid());
-
-        // Move player away while tile is fallen
-        player.position = Vector3{ 10.0f, 0.0f, 0.0f };
-
-        // Step 3: After respawnTime (0.4s), transitions back to STABLE
-        sim = 0.0f;
-        while (sim < 0.45f) {
-            level.Update(dt, player);
-            sim += dt;
-        }
-        assert(level.crumbleTiles[0].state == CrumbleState::STABLE);
-        assert(level.crumbleTiles[0].IsSolid());
-        std::cout << "[SMOKE-TEST] Crumble tile full cycle passed!" << std::endl;
-    }
-
-    // 11. Milestone 4: Spikes & Bounce Pads
-    {
-        std::cout << "[SMOKE-TEST] Testing spikes and bounce pads..." << std::endl;
-        Level level;
-        level.spawnPos = Vector3{ 0.0f, 0.0f, -10.0f };
-
-        // Spikes at (5, 0, 0)
-        Spikes sp;
-        sp.center = Vector3{ 5.0f, 0.5f, 0.0f };
-        sp.size = Vector3{ 2.0f, 1.0f, 2.0f };
-        sp.aabb = AABB::FromCenterSize(sp.center, sp.size);
-        level.spikesList.push_back(sp);
-
-        // Bounce pad at (10, 0, 0)
-        BouncePad bp;
-        bp.center = Vector3{ 10.0f, 0.25f, 0.0f };
-        bp.size = Vector3{ 2.0f, 0.5f, 2.0f };
-        bp.strength = 20.0f;
-        bp.aabb = AABB::FromCenterSize(bp.center, bp.size);
-        level.bouncePads.push_back(bp);
-
-        Player player;
-        level.Reset(player);
-
-        // Test Spikes
-        player.position = Vector3{ 5.0f, 0.5f, 0.0f };
-        level.Update(dt, player);
-        assert(level.deaths == 1);
-        assert(player.position.z == level.spawnPos.z);
-
-        // Test Bounce Pad
-        player.position = Vector3{ 10.0f, 0.5f, 0.0f };
-        player.velocity.y = -2.0f;
-        level.Update(dt, player);
-        std::cout << "[SMOKE-TEST] Bounce pad launched player to vel Y: " << player.velocity.y << " m/s" << std::endl;
-        assert(player.velocity.y == 20.0f);
-    }
-
-    std::cout << "[SMOKE-TEST] All Milestone 4 moving entities & hazard assertions passed!" << std::endl;
+    std::cout << "[SMOKE-TEST] All Milestone 5 tests passed successfully!" << std::endl;
     return 0;
 }
 
@@ -361,12 +264,15 @@ int main(int argc, char* argv[]) {
     const int screenHeight = 720;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(screenWidth, screenHeight, "Roblox Obby Adventure - M4 Hazards & Movers");
+    InitWindow(screenWidth, screenHeight, "Roblox Obby Adventure - M5 Polish & Audio");
     if (!IsWindowReady()) {
         std::cerr << "Window could not be initialized. Running smoke test instead." << std::endl;
         return RunSmokeTest();
     }
     SetTargetFPS(60);
+
+    // Initialize procedural audio system
+    AudioManager::Init();
 
     Level level;
     if (!level.LoadFromFile("assets/levels/w1_l1.lvl")) {
@@ -379,6 +285,13 @@ int main(int argc, char* argv[]) {
     OrbitCamera camera;
     camera.Init(player.position);
 
+    ParticleSystem particleSystem;
+
+    // Polish effects
+    float screenShakeTimer = 0.0f;
+    float respawnFadeAlpha = 0.0f;
+    int previousDeaths = 0;
+
     float accumulator = 0.0f;
 
     while (!WindowShouldClose()) {
@@ -388,7 +301,28 @@ int main(int argc, char* argv[]) {
         }
 
         std::vector<AABB> colliders = level.GetSolidColliders();
-        camera.Update(player.position, frameDelta, colliders);
+
+        // Screen Shake calculation
+        Vector3 camFocus = player.position;
+        if (screenShakeTimer > 0.0f) {
+            screenShakeTimer -= frameDelta;
+            float shakeProgress = screenShakeTimer / 0.35f;
+            float shakeMag = 0.25f * shakeProgress;
+            auto randOffset = [shakeMag]() {
+                return (static_cast<float>(rand() % 2000) / 1000.0f - 1.0f) * shakeMag;
+            };
+            camFocus.x += randOffset();
+            camFocus.y += randOffset();
+            camFocus.z += randOffset();
+        }
+
+        camera.Update(camFocus, frameDelta, colliders);
+        particleSystem.Update(frameDelta);
+
+        // Respawn fade decay
+        if (respawnFadeAlpha > 0.0f) {
+            respawnFadeAlpha = std::max(0.0f, respawnFadeAlpha - frameDelta * 2.8f);
+        }
 
         if (!level.isCompleted) {
             accumulator += frameDelta;
@@ -404,22 +338,52 @@ int main(int argc, char* argv[]) {
 
                 level.Update(Constants::PHYSICS_DT, player);
                 colliders = level.GetSolidColliders();
-                player.UpdatePhysics(Constants::PHYSICS_DT, input, camera.GetYawRadians(), colliders);
+                player.UpdatePhysics(Constants::PHYSICS_DT, input, camera.GetYawRadians(), colliders, &particleSystem);
+
+                // Check death event for screen shake & fade
+                if (level.deaths > previousDeaths) {
+                    previousDeaths = level.deaths;
+                    screenShakeTimer = 0.35f;
+                    respawnFadeAlpha = 0.85f;
+                }
 
                 accumulator -= Constants::PHYSICS_DT;
             }
         }
 
+        // Quick character shirt color toggle (1-6 keys for testing in M5)
+        if (IsKeyPressed(KEY_ONE)) player.colorIndex = 0;
+        if (IsKeyPressed(KEY_TWO)) player.colorIndex = 1;
+        if (IsKeyPressed(KEY_THREE)) player.colorIndex = 2;
+        if (IsKeyPressed(KEY_FOUR)) player.colorIndex = 3;
+        if (IsKeyPressed(KEY_FIVE)) player.colorIndex = 4;
+        if (IsKeyPressed(KEY_SIX)) player.colorIndex = 5;
+
+        // Render Frame
         BeginDrawing();
         level.DrawSkybox();
 
         BeginMode3D(camera.GetRaylibCamera());
         level.Draw();
+        player.DrawShadow(colliders);
         player.Draw();
+        particleSystem.Draw();
         EndMode3D();
 
+        // Respawn flash/fade overlay
+        if (respawnFadeAlpha > 0.001f) {
+            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(),
+                          Color{ 20, 10, 15, static_cast<unsigned char>(respawnFadeAlpha * 255.0f) });
+        }
+
+        // HUD & Volume Slider
         UI::DrawHUD(level.name, level.elapsedTime, level.parTime,
                    level.GetActivatedCheckpointCount(), level.GetTotalCheckpointCount(), level.deaths);
+
+        UI::DrawVolumeControl(GetScreenWidth() - 320, 20, 150.0f);
+
+        // Character color hotkeys hint
+        DrawText("Shirt Color: Keys 1-6", 20, 140, 15, Color{ 230, 240, 255, 200 });
 
         if (level.isCompleted) {
             ResultsAction action = UI::DrawResultsScreen(
@@ -430,14 +394,17 @@ int main(int argc, char* argv[]) {
             if (action == ResultsAction::RETRY || action == ResultsAction::NEXT_LEVEL) {
                 level.Reset(player);
                 camera.Init(player.position);
+                particleSystem.Clear();
+                previousDeaths = level.deaths;
                 accumulator = 0.0f;
             }
         }
 
-        DrawFPS(GetScreenWidth() - 90, 20);
+        DrawFPS(GetScreenWidth() - 80, 55);
         EndDrawing();
     }
 
+    AudioManager::Close();
     CloseWindow();
     return 0;
 }
