@@ -1,23 +1,14 @@
 #pragma once
-#include "raylib.h"
+#include "aabb.h"
+#include "vec3.h"
 #include <vector>
 
-struct AABB {
-    Vector3 min;
-    Vector3 max;
+// Check if two AABBs intersect (delegates to AABB::intersects)
+inline bool CheckAABBOverlap(const AABB& a, const AABB& b) {
+    return a.intersects(b);
+}
 
-    Vector3 GetCenter() const;
-    Vector3 GetExtents() const;
-    Vector3 GetSize() const;
-    static AABB FromCenterSize(Vector3 center, Vector3 size);
-    static AABB FromMinSize(Vector3 min, Vector3 size);
-};
-
-// Check if two AABBs intersect
-bool CheckAABBOverlap(const AABB& a, const AABB& b);
-
-// Ray-AABB intersection using slab method.
-// Returns true if ray intersects box within [minDist, maxDist], and sets outDist.
+// Ray-AABB intersection using slab method (delegates to AABB::raycast)
 bool RaycastAABB(Vector3 origin, Vector3 direction, float minDist, float maxDist, const AABB& box, float* outDist = nullptr);
 
 // Query all obstacles and find the closest hit distance

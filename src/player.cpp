@@ -182,14 +182,14 @@ void Player::UpdatePhysics(float dt, const PlayerInput& input, float cameraYaw,
         position.x += velocity.x * subDt;
         AABB boxX = GetAABB();
         for (const auto& c : colliders) {
-            bool overlapY = (boxX.min.y < c.max.y - SKIN) && (boxX.max.y > c.min.y + SKIN);
-            bool overlapZ = (boxX.min.z < c.max.z - SKIN) && (boxX.max.z > c.min.z + SKIN);
+            bool overlapY = (boxX.getMin().y < c.getMax().y - SKIN) && (boxX.getMax().y > c.getMin().y + SKIN);
+            bool overlapZ = (boxX.getMin().z < c.getMax().z - SKIN) && (boxX.getMax().z > c.getMin().z + SKIN);
             if (overlapY && overlapZ) {
-                if (boxX.min.x < c.max.x && boxX.max.x > c.min.x) {
+                if (boxX.getMin().x < c.getMax().x && boxX.getMax().x > c.getMin().x) {
                     if (velocity.x > 0.0f) {
-                        position.x = c.min.x - Constants::HALF_PLAYER_WIDTH;
+                        position.x = c.getMin().x - Constants::HALF_PLAYER_WIDTH;
                     } else if (velocity.x < 0.0f) {
-                        position.x = c.max.x + Constants::HALF_PLAYER_WIDTH;
+                        position.x = c.getMax().x + Constants::HALF_PLAYER_WIDTH;
                     }
                     velocity.x = 0.0f;
                     boxX = GetAABB();
@@ -201,14 +201,14 @@ void Player::UpdatePhysics(float dt, const PlayerInput& input, float cameraYaw,
         position.z += velocity.z * subDt;
         AABB boxZ = GetAABB();
         for (const auto& c : colliders) {
-            bool overlapX = (boxZ.min.x < c.max.x - SKIN) && (boxZ.max.x > c.min.x + SKIN);
-            bool overlapY = (boxZ.min.y < c.max.y - SKIN) && (boxZ.max.y > c.min.y + SKIN);
+            bool overlapX = (boxZ.getMin().x < c.getMax().x - SKIN) && (boxZ.getMax().x > c.getMin().x + SKIN);
+            bool overlapY = (boxZ.getMin().y < c.getMax().y - SKIN) && (boxZ.getMax().y > c.getMin().y + SKIN);
             if (overlapX && overlapY) {
-                if (boxZ.min.z < c.max.z && boxZ.max.z > c.min.z) {
+                if (boxZ.getMin().z < c.getMax().z && boxZ.getMax().z > c.getMin().z) {
                     if (velocity.z > 0.0f) {
-                        position.z = c.min.z - Constants::HALF_PLAYER_DEPTH;
+                        position.z = c.getMin().z - Constants::HALF_PLAYER_DEPTH;
                     } else if (velocity.z < 0.0f) {
-                        position.z = c.max.z + Constants::HALF_PLAYER_DEPTH;
+                        position.z = c.getMax().z + Constants::HALF_PLAYER_DEPTH;
                     }
                     velocity.z = 0.0f;
                     boxZ = GetAABB();
@@ -220,16 +220,16 @@ void Player::UpdatePhysics(float dt, const PlayerInput& input, float cameraYaw,
         position.y += velocity.y * subDt;
         AABB boxY = GetAABB();
         for (const auto& c : colliders) {
-            bool overlapX = (boxY.min.x < c.max.x - SKIN) && (boxY.max.x > c.min.x + SKIN);
-            bool overlapZ = (boxY.min.z < c.max.z - SKIN) && (boxY.max.z > c.min.z + SKIN);
+            bool overlapX = (boxY.getMin().x < c.getMax().x - SKIN) && (boxY.getMax().x > c.getMin().x + SKIN);
+            bool overlapZ = (boxY.getMin().z < c.getMax().z - SKIN) && (boxY.getMax().z > c.getMin().z + SKIN);
             if (overlapX && overlapZ) {
-                if (boxY.min.y <= c.max.y && boxY.max.y > c.min.y) {
+                if (boxY.getMin().y <= c.getMax().y && boxY.getMax().y > c.getMin().y) {
                     if (velocity.y <= 0.0f) {
-                        position.y = c.max.y;
+                        position.y = c.getMax().y;
                         velocity.y = 0.0f;
                         landedThisTick = true;
-                    } else if (boxY.min.y < c.min.y && boxY.max.y >= c.min.y) {
-                        position.y = c.min.y - Constants::PLAYER_HEIGHT;
+                    } else if (boxY.getMin().y < c.getMin().y && boxY.getMax().y >= c.getMin().y) {
+                        position.y = c.getMin().y - Constants::PLAYER_HEIGHT;
                         velocity.y = 0.0f;
                     }
                     boxY = GetAABB();

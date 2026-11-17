@@ -106,7 +106,7 @@ AABB Mover::GetAABB() const {
 
 bool Spinner::CheckOverlapWithPlayer(const AABB& playerAABB) const {
     float halfH = height * 0.5f;
-    if (playerAABB.max.y < (center.y - halfH) || playerAABB.min.y > (center.y + halfH)) {
+    if (playerAABB.getMax().y < (center.y - halfH) || playerAABB.getMin().y > (center.y + halfH)) {
         return false;
     }
 
@@ -518,9 +518,9 @@ void Level::Update(float dt, Player& player, ParticleSystem* particles) {
 
         AABB moverAABB = m.GetAABB();
         bool standingOnTop = player.isGrounded &&
-                             (std::abs(player.position.y - moverAABB.max.y) < 0.05f) &&
-                             (playerAABB.min.x < moverAABB.max.x && playerAABB.max.x > moverAABB.min.x) &&
-                             (playerAABB.min.z < moverAABB.max.z && playerAABB.max.z > moverAABB.min.z);
+                             (std::abs(player.position.y - moverAABB.getMax().y) < 0.05f) &&
+                             (playerAABB.getMin().x < moverAABB.getMax().x && playerAABB.getMax().x > moverAABB.getMin().x) &&
+                             (playerAABB.getMin().z < moverAABB.getMax().z && playerAABB.getMax().z > moverAABB.getMin().z);
 
         if (standingOnTop) {
             player.position = Vector3Add(player.position, m.frameDisplacement);
@@ -544,9 +544,9 @@ void Level::Update(float dt, Player& player, ParticleSystem* particles) {
     for (auto& c : crumbleTiles) {
         AABB cAABB = c.GetAABB();
         bool playerStanding = player.isGrounded &&
-                              (std::abs(player.position.y - cAABB.max.y) < 0.05f) &&
-                              (playerAABB.min.x < cAABB.max.x && playerAABB.max.x > cAABB.min.x) &&
-                              (playerAABB.min.z < cAABB.max.z && playerAABB.max.z > cAABB.min.z);
+                              (std::abs(player.position.y - cAABB.getMax().y) < 0.05f) &&
+                              (playerAABB.getMin().x < cAABB.getMax().x && playerAABB.getMax().x > cAABB.getMin().x) &&
+                              (playerAABB.getMin().z < cAABB.getMax().z && playerAABB.getMax().z > cAABB.getMin().z);
 
         switch (c.state) {
             case CrumbleState::STABLE:
@@ -1021,7 +1021,7 @@ void Level::Draw() const {
         Vector3 fSize = finish.triggerAABB.GetSize();
 
         // Base pad
-        Vector3 basePadPos = { fCenter.x, finish.triggerAABB.min.y + Constants::SURFACE_DECAL_OFFSET_Y + 0.02f, fCenter.z };
+        Vector3 basePadPos = { fCenter.x, finish.triggerAABB.getMin().y + Constants::SURFACE_DECAL_OFFSET_Y + 0.02f, fCenter.z };
         DrawCube(basePadPos, fSize.x + 0.4f, 0.08f, fSize.z + 0.4f, Color{ 245, 195, 45, 255 });
         DrawCubeWires(basePadPos, fSize.x + 0.42f, 0.09f, fSize.z + 0.42f, Color{ 185, 140, 20, 255 });
 

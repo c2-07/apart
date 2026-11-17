@@ -113,15 +113,15 @@ ValidationResult LevelValidator::ValidateFile(const std::string& filepath) {
             const auto& nodeB = nodes[v];
 
             // Target landing height
-            float targetY = nodeB.isTrigger ? nodeB.aabb.min.y : nodeB.aabb.max.y;
-            float deltaY = targetY - nodeA.aabb.max.y;
+            float targetY = nodeB.isTrigger ? nodeB.aabb.getMin().y : nodeB.aabb.getMax().y;
+            float deltaY = targetY - nodeA.aabb.getMax().y;
 
             // Launch velocity from node A
             float launchVel = nodeA.isBounce ? nodeA.bounceStrength : Constants::JUMP_VELOCITY;
 
             // Compute maximum horizontal jump distance possible
             float maxAllowedDist = 0.0f;
-            if (nodeB.isTrigger && nodeB.aabb.min.y <= nodeA.aabb.max.y && nodeB.aabb.max.y >= nodeA.aabb.max.y) {
+            if (nodeB.isTrigger && nodeB.aabb.getMin().y <= nodeA.aabb.getMax().y && nodeB.aabb.getMax().y >= nodeA.aabb.getMax().y) {
                 // If trigger overlaps platform height directly
                 maxAllowedDist = 8.0f;
             } else {
@@ -133,8 +133,8 @@ ValidationResult LevelValidator::ValidateFile(const std::string& filepath) {
             maxAllowedDist += moverExpansion;
 
             // Compute horizontal gap between AABBs in XZ
-            float dx = std::max(0.0f, std::max(nodeA.aabb.min.x - nodeB.aabb.max.x, nodeB.aabb.min.x - nodeA.aabb.max.x));
-            float dz = std::max(0.0f, std::max(nodeA.aabb.min.z - nodeB.aabb.max.z, nodeB.aabb.min.z - nodeA.aabb.max.z));
+            float dx = std::max(0.0f, std::max(nodeA.aabb.getMin().x - nodeB.aabb.getMax().x, nodeB.aabb.getMin().x - nodeA.aabb.getMax().x));
+            float dz = std::max(0.0f, std::max(nodeA.aabb.getMin().z - nodeB.aabb.getMax().z, nodeB.aabb.getMin().z - nodeA.aabb.getMax().z));
             float gapXZ = sqrtf(dx * dx + dz * dz);
 
             if (gapXZ <= maxAllowedDist && maxAllowedDist > 0.0f) {

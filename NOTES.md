@@ -237,6 +237,43 @@ cmake --build build
   - **Animated Level Title Banner:** A prominent banner showcasing the course title appears centered at level start and smoothly fades out after 2.0 seconds (`UI_LEVEL_TITLE_DURATION = 2.0s`).
   - **Toggleable FPS Counter:** FPS display is disabled by default and can be toggled on/off at any time using the `F3` function key.
 
+## OOP Architecture Refactor Plan
+
+### 1. Current Codebase Assessment (Pre-Refactor)
+- **Math & Collisions:** `struct AABB` in `src/collision.h` exposes public `min` and `max` vectors with standalone free functions (`CheckAABBOverlap`, `RaycastAABB`, `RaycastScene`). Math relies on raw raylib `Vector3` C structs and standalone raymath functions without C++ operator overloading.
+- **Entities & Level:** Procedural struct definitions (`LevelBox`, `Mover`, `Spinner`, `CrumbleTile`, `Spikes`, `BouncePad`, `ButtonEntity`, `DoorEntity`, `Checkpoint`, `FinishZone`) exist with public members in `src/level.h`. `Level` stores 9 distinct `std::vector`s, iterating over each container separately in `Update()` and `Draw()` via monolithic loops.
+- **Player & Rendering:** `Player` struct mixes physics integration, timers, collision response, and character limb mesh rendering.
+- **Game State Machine:** `Game` uses an `enum class AppState` with large `switch` statements dispatching to private methods (`UpdateMainMenu`, `DrawPlaying`, etc.), requiring tight coupling.
+- **Resource Management & Error Handling:** Manual resource initialization without RAII wrappers; level loading returns boolean flags rather than structured C++ exceptions.
+
+### 2. Target Object-Oriented Architecture
+1. **Value Classes & Operator Overloading (`Vec3`, `AABB`):**
+   - Encapsulated `Vec3` class with overloaded arithmetic (`+`, `-`, `*`, `+=`, `-=`, `==`, `!=`) and raylib conversions.
+   - Encapsulated `AABB` class with constructors, `intersects()`, `contains()`, `operator==`, and slab raycasting.
+2. **Polymorphic Entity Hierarchy (`Entity` Base & Derived Classes):**
+   - Abstract base class `Entity` with pure virtual `update()` and `draw()`, virtual `onPlayerTouch()`, `getBounds()`, `isSolid()`, protected members, and virtual destructor.
+   - Derived entity classes: `Platform`, `MovingPlatform` (inheriting from `Platform` for multi-level inheritance), `CrumbleTile`, `Spikes`, `Spinner`, `BouncePad`, `Checkpoint`, `FinishZone`, `Button`, `Door`.
+3. **Polymorphic Level & Factory Loading:**
+   - `Level` owns `std::vector<std::unique_ptr<Entity>>`. Main loop dispatches polymorphically with zero type switching or downcasting.
+   - Static factory function parsing `.lvl` records and returning `std::unique_ptr<Entity>`.
+   - Custom exception `LevelParseError : public std::runtime_error`.
+4. **Encapsulated Player, PlayerAnimator & CameraController:**
+   - `Player` encapsulates movement, velocity, and jump mechanics.
+   - `PlayerAnimator` encapsulates procedural limb swings, squash-and-stretch, lean, and avatar drawing.
+   - `CameraController` encapsulates orbit follow, lookahead, and dynamic FOV.
+5. **State Pattern (`GameState` Hierarchy):**
+   - Abstract `GameState` with virtual `handleInput()`, `update()`, `draw()`.
+   - Concrete states: `MenuState`, `PlayState`, `PauseState`, `ResultsState`, `LevelSelectState`, `SettingsState`, `CharacterSelectState`.
+   - `Game` context class owns `std::unique_ptr<GameState>` with decoupled state transitions.
+6. **Advanced OOP Concepts:**
+   - RAII wrappers (`ShaderHolder`, `SoundBank`).
+   - Class template `ObjectPool<T>` / `Timer<T>`.
+   - Pure abstract interfaces (`IDrawable`, `IUpdatable`, `ISaveable`) with multiple inheritance.
+   - Clean namespacing (`obby::math`, `obby::entity`, `obby::state`, `obby::core`).
+7. **Comprehensive OOP Documentation (`OOP_CONCEPTS.md`):**
+   - Viva-ready mapping table and Mermaid class diagrams.
+
+
 
 
 

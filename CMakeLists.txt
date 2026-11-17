@@ -21,6 +21,8 @@ set(RAYGUI_INCLUDE_DIR "${raylib_SOURCE_DIR}/examples/shapes")
 
 add_executable(obby
     src/main.cpp
+    src/vec3.cpp
+    src/aabb.cpp
     src/game.cpp
     src/collision.cpp
     src/camera.cpp
