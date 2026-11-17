@@ -87,6 +87,9 @@ Game::Game()
       screenShakeTimer(0.0f),
       respawnFadeAlpha(0.0f),
       levelLoadFadeAlpha(0.0f),
+      displayedCheckpoints(0.0f),
+      levelPlayTime(0.0f),
+      showFps(false),
       previousDeaths(0),
       accumulator(0.0f),
       lightingShader{},
@@ -187,6 +190,8 @@ void Game::LoadLevelByIndex(int index) {
     screenShakeTimer = 0.0f;
     respawnFadeAlpha = 0.0f;
     levelLoadFadeAlpha = 1.0f;
+    displayedCheckpoints = 0.0f;
+    levelPlayTime = 0.0f;
     accumulator = 0.0f;
 }
 
@@ -532,6 +537,17 @@ void Game::UpdatePlaying(float frameDelta) {
     camera.Update(camFocus, frameDelta, colliders, save.sensitivity, save.invertY, player.velocity);
     particles.Update(frameDelta);
 
+    levelPlayTime += frameDelta;
+
+    // Smooth number animation for checkpoint counter
+    float targetCp = static_cast<float>(level.GetActivatedCheckpointCount());
+    displayedCheckpoints += (targetCp - displayedCheckpoints) * std::min(1.0f, frameDelta * Constants::UI_CHECKPOINT_LERP_SPEED);
+
+    // F3: Toggle FPS Display (Off by default)
+    if (IsKeyPressed(KEY_F3)) {
+        showFps = !showFps;
+    }
+
     if (respawnFadeAlpha > 0.0f) {
         respawnFadeAlpha = std::max(0.0f, respawnFadeAlpha - frameDelta * Constants::RESPAWN_FADE_SPEED);
     }
@@ -605,24 +621,46 @@ void Game::DrawPlaying() {
                       Color{ 18, 12, 16, static_cast<unsigned char>(maxFade * 255.0f) });
     }
 
+    // Control hints fade out after 8s of play, reappear when paused
+    float hintAlpha = 0.0f;
+    if (state == AppState::PAUSED) {
+        hintAlpha = 1.0f;
+    } else if (levelPlayTime < Constants::UI_CONTROL_HINT_FADE_START) {
+        hintAlpha = 1.0f;
+    } else if (levelPlayTime < Constants::UI_CONTROL_HINT_FADE_END) {
+        hintAlpha = 1.0f - (levelPlayTime - Constants::UI_CONTROL_HINT_FADE_START) /
+                           (Constants::UI_CONTROL_HINT_FADE_END - Constants::UI_CONTROL_HINT_FADE_START);
+    }
+
+    // Large level title banner at level start, fades out after 2s
+    float titleAlpha = 0.0f;
+    if (levelPlayTime < Constants::UI_LEVEL_TITLE_DURATION) {
+        float t = levelPlayTime / Constants::UI_LEVEL_TITLE_DURATION;
+        titleAlpha = (t < 0.7f) ? 1.0f : (1.0f - (t - 0.7f) / 0.3f);
+    }
+
     UI::DrawHUD(level.name, level.elapsedTime, level.parTime,
-               level.GetActivatedCheckpointCount(), level.GetTotalCheckpointCount(), level.deaths);
+                static_cast<int>(std::round(displayedCheckpoints)), level.GetTotalCheckpointCount(), level.deaths,
+                hintAlpha, titleAlpha);
 
     // Context hint banner
     if (noclipMode) {
-        DrawRectangle(20, 135, 460, 28, Color{ 220, 80, 40, 220 });
-        DrawText("[NOCLIP ON] Fly: WASD+Space/Shift | T: Teleport to Checkpoint", 30, 141, 14, WHITE);
+        DrawRectangle(20, 140, 460, 28, Color{ 220, 80, 40, 220 });
+        DrawText("[NOCLIP ON] Fly: WASD+Space/Shift | T: Teleport to Checkpoint", 30, 146, 14, WHITE);
     } else if (level.ghost.state == GhostRecorder::State::RECORDING) {
-        DrawRectangle(20, 135, 420, 28, Color{ 230, 50, 60, 200 });
+        DrawRectangle(20, 140, 420, 28, Color{ 230, 50, 60, 200 });
         char ghostBuf[64];
         snprintf(ghostBuf, sizeof(ghostBuf), "[REC] RECORDING GHOST (%.1fs / 20s) - Press G to Finish", level.ghost.recordTimer);
-        DrawText(ghostBuf, 30, 141, 14, WHITE);
+        DrawText(ghostBuf, 30, 146, 14, WHITE);
     } else if (level.ghost.state == GhostRecorder::State::PLAYING) {
-        DrawRectangle(20, 135, 420, 28, Color{ 40, 160, 220, 200 });
-        DrawText("[PLAY] GHOST ACTIVE (Holding buttons) - Press G to Reset", 30, 141, 14, WHITE);
+        DrawRectangle(20, 140, 420, 28, Color{ 40, 160, 220, 200 });
+        DrawText("[PLAY] GHOST ACTIVE (Holding buttons) - Press G to Reset", 30, 146, 14, WHITE);
     }
 
-    DrawFPS(GetScreenWidth() - 80, 20);
+    // Toggleable FPS counter (F3), off by default
+    if (showFps) {
+        DrawFPS(GetScreenWidth() - 85, 20);
+    }
 }
 
 void Game::UpdatePaused() {

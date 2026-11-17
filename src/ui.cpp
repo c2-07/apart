@@ -100,33 +100,88 @@ void DrawVolumeControl(int posX, int posY, float width) {
     }
 }
 
-void DrawHUD(const std::string& levelName, float timer, float parTime, int checkpoints, int totalCheckpoints, int deaths) {
-    Rectangle hudPanel = { 15, 15, 340, 115 };
-    DrawRectangleRounded(hudPanel, 0.2f, 4, Color{ 20, 25, 35, 200 });
-    DrawRectangleRoundedLines(hudPanel, 0.2f, 4, Color{ 70, 90, 120, 255 });
+void DrawHUD(const std::string& levelName, float timer, float parTime,
+             int checkpoints, int totalCheckpoints, int deaths,
+             float hintAlpha, float titleAlpha) {
+    // 1. Polished HUD Panel with Drop Shadow & Consistent Padding
+    Rectangle hudPanel = { 20, 20, 340, 115 };
+    // Subtle drop shadow
+    DrawRectangleRounded(Rectangle{ hudPanel.x + 3.0f, hudPanel.y + 3.0f, hudPanel.width, hudPanel.height }, 0.2f, 4, Color{ 0, 0, 0, 75 });
+    // Main panel background
+    DrawRectangleRounded(hudPanel, 0.2f, 4, Color{ 22, 28, 40, 230 });
+    // Slightly lighter rounded border
+    DrawRectangleRoundedLines(hudPanel, 0.2f, 4, Color{ 95, 120, 165, 220 });
 
-    DrawText(levelName.c_str(), 30, 25, 20, Color{ 255, 255, 255, 255 });
+    float padX = hudPanel.x + 18.0f;
+    float curY = hudPanel.y + 14.0f;
 
+    // Level Title
+    DrawText(levelName.c_str(), (int)padX, (int)curY, 20, Color{ 250, 252, 255, 255 });
+    curY += 26.0f;
+
+    // Color-Graded Timer: green under par, yellow near par (within 125%), red over par
+    Color timeColor;
+    if (timer <= parTime) {
+        timeColor = Color{ 85, 230, 120, 255 }; // Under par: Vibrant Green
+    } else if (timer <= parTime * 1.25f) {
+        timeColor = Color{ 245, 215, 60, 255 }; // Near par: Bright Yellow
+    } else {
+        timeColor = Color{ 245, 85, 75, 255 };  // Over par: Warning Red
+    }
     char timeBuf[64];
     snprintf(timeBuf, sizeof(timeBuf), "Time: %.2fs (Par: %.1fs)", timer, parTime);
-    Color timeColor = (timer <= parTime) ? Color{ 100, 240, 120, 255 } : Color{ 240, 190, 80, 255 };
-    DrawText(timeBuf, 30, 52, 17, timeColor);
+    DrawText(timeBuf, (int)padX, (int)curY, 16, timeColor);
+    curY += 22.0f;
 
+    // Checkpoints with Gold Completion Highlight
     char cpBuf[64];
     snprintf(cpBuf, sizeof(cpBuf), "Checkpoints: %d / %d", checkpoints, totalCheckpoints);
-    DrawText(cpBuf, 30, 75, 16, Color{ 210, 220, 230, 255 });
+    Color cpColor = (checkpoints == totalCheckpoints && totalCheckpoints > 0)
+        ? Color{ 255, 220, 60, 255 }
+        : Color{ 215, 225, 240, 255 };
+    DrawText(cpBuf, (int)padX, (int)curY, 16, cpColor);
+    curY += 22.0f;
 
+    // Deaths Counter
     char deathBuf[32];
     snprintf(deathBuf, sizeof(deathBuf), "Deaths: %d", deaths);
-    DrawText(deathBuf, 30, 97, 16, (deaths == 0) ? Color{ 150, 230, 150, 255 } : Color{ 245, 110, 100, 255 });
+    Color deathColor = (deaths == 0) ? Color{ 145, 230, 155, 255 } : Color{ 245, 110, 100, 255 };
+    DrawText(deathBuf, (int)padX, (int)curY, 16, deathColor);
 
     int screenWidth = GetScreenWidth();
     int screenHeight = GetScreenHeight();
-    const char* hint = "WASD: Move | Space: Jump | R: Respawn | ESC: Pause | G: Ghost";
-    int hintWidth = MeasureText(hint, 15);
-    DrawRectangleRounded(Rectangle{ (float)(screenWidth / 2 - hintWidth / 2 - 15), (float)(screenHeight - 38), (float)(hintWidth + 30), 28 },
-                         0.3f, 4, Color{ 15, 20, 30, 180 });
-    DrawText(hint, screenWidth / 2 - hintWidth / 2, screenHeight - 32, 15, Color{ 220, 230, 240, 220 });
+
+    // 2. Large Animated Level Title at Level Start (Fades over 2s)
+    if (titleAlpha > 0.01f) {
+        int titleSize = 34;
+        int titleW = MeasureText(levelName.c_str(), titleSize);
+        float bannerW = titleW + 64.0f;
+        float bannerH = 56.0f;
+        float bannerX = (screenWidth - bannerW) * 0.5f;
+        float bannerY = 80.0f;
+        unsigned char bannerBgAlpha = static_cast<unsigned char>(titleAlpha * 210.0f);
+        unsigned char bannerTextAlpha = static_cast<unsigned char>(titleAlpha * 255.0f);
+
+        Rectangle bannerRec = { bannerX, bannerY, bannerW, bannerH };
+        DrawRectangleRounded(Rectangle{ bannerRec.x + 3.0f, bannerRec.y + 3.0f, bannerRec.width, bannerRec.height }, 0.25f, 4, Color{ 0, 0, 0, static_cast<unsigned char>(bannerBgAlpha * 0.6f) });
+        DrawRectangleRounded(bannerRec, 0.25f, 4, Color{ 18, 24, 36, bannerBgAlpha });
+        DrawRectangleRoundedLines(bannerRec, 0.25f, 4, Color{ 255, 215, 60, static_cast<unsigned char>(titleAlpha * 180.0f) });
+        DrawText(levelName.c_str(), (int)(bannerX + (bannerW - titleW) * 0.5f), (int)(bannerY + (bannerH - titleSize) * 0.5f), titleSize, Color{ 255, 225, 75, bannerTextAlpha });
+    }
+
+    // 3. Fading Control Hints at Bottom (Fades out after 8s of play, reappears when paused)
+    if (hintAlpha > 0.01f) {
+        const char* hint = "WASD: Move | Space: Jump | R: Respawn | ESC: Pause | G: Ghost";
+        int hintWidth = MeasureText(hint, 15);
+        unsigned char bgAlpha = static_cast<unsigned char>(hintAlpha * 190.0f);
+        unsigned char textAlpha = static_cast<unsigned char>(hintAlpha * 230.0f);
+
+        Rectangle hintBox = { (float)(screenWidth / 2 - hintWidth / 2 - 16), (float)(screenHeight - 40), (float)(hintWidth + 32), 28.0f };
+        DrawRectangleRounded(Rectangle{ hintBox.x + 2.0f, hintBox.y + 2.0f, hintBox.width, hintBox.height }, 0.35f, 4, Color{ 0, 0, 0, static_cast<unsigned char>(bgAlpha * 0.5f) });
+        DrawRectangleRounded(hintBox, 0.35f, 4, Color{ 16, 22, 32, bgAlpha });
+        DrawRectangleRoundedLines(hintBox, 0.35f, 4, Color{ 80, 105, 140, static_cast<unsigned char>(hintAlpha * 150.0f) });
+        DrawText(hint, screenWidth / 2 - hintWidth / 2, screenHeight - 34, 15, Color{ 225, 235, 245, textAlpha });
+    }
 }
 
 ResultsAction DrawResultsScreen(int screenWidth, int screenHeight, float finalTime, float parTime, int deaths, int stars) {

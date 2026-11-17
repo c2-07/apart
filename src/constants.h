@@ -91,4 +91,10 @@ namespace Constants {
     constexpr float SCREEN_SHAKE_MAGNITUDE = 0.20f;
     constexpr float LEVEL_LOAD_FADE_SPEED = 2.2f;
     constexpr float RESPAWN_FADE_SPEED = 2.8f;
+
+    // UI Polish (Visual Pass Step 9)
+    constexpr float UI_CONTROL_HINT_FADE_START = 6.0f;
+    constexpr float UI_CONTROL_HINT_FADE_END = 8.0f;
+    constexpr float UI_LEVEL_TITLE_DURATION = 2.0f;
+    constexpr float UI_CHECKPOINT_LERP_SPEED = 8.0f;
 }

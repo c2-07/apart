@@ -58,6 +58,9 @@ public:
     float screenShakeTimer;
     float respawnFadeAlpha;
     float levelLoadFadeAlpha;
+    float displayedCheckpoints;
+    float levelPlayTime;
+    bool showFps;
     int previousDeaths;
     float accumulator;
 

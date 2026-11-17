@@ -16,7 +16,9 @@ namespace UI {
     bool Toggle(Rectangle bounds, const char* label, bool* value);
 
     // In-game HUD
-    void DrawHUD(const std::string& levelName, float timer, float parTime, int checkpoints, int totalCheckpoints, int deaths);
+    void DrawHUD(const std::string& levelName, float timer, float parTime,
+                 int checkpoints, int totalCheckpoints, int deaths,
+                 float hintAlpha = 1.0f, float titleAlpha = 0.0f);
     void DrawVolumeControl(int posX, int posY, float width = 150.0f);
 
     // Results modal

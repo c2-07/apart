@@ -227,6 +227,17 @@ cmake --build build
   - **Retuned Death Screen Shake:** Calibrated short, punchy impulse screen shake (`SCREEN_SHAKE_DURATION = 0.28s`, `SCREEN_SHAKE_MAGNITUDE = 0.20m`) with quadratic falloff.
   - **Cinematic Fade Transitions:** Integrated smooth fullscreen fade-in (`LEVEL_LOAD_FADE_SPEED = 2.2`, `RESPAWN_FADE_SPEED = 2.8`) on level start, restart, and player death/respawn.
 
+### Step 9: UI Polish, HUD Redesign, Animated Counters & Fading Hints
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - **Polished HUD Panel:** Redesigned with consistent internal padding (18px), rounded corners, subtle drop shadow (`Color{ 0, 0, 0, 75 }`), and a crisp, lighter border highlight (`Color{ 95, 120, 165, 220 }`).
+  - **Dynamic Color-Graded Timer:** Timer text dynamically responds to par time targets: vibrant green when under par (`timer <= parTime`), bright golden yellow when near par (`timer <= parTime * 1.25f`), and clear warning red when over par.
+  - **Smooth Checkpoint Roll:** Checkpoint count interpolates smoothly (`UI_CHECKPOINT_LERP_SPEED = 8.0`) to avoid jarring visual jumps upon activation, and glows gold when all course checkpoints are collected.
+  - **Fading Control Hints:** On-screen control bar at the screen bottom remains fully visible during onboarding, smoothly fades out after 8 seconds of play (`UI_CONTROL_HINT_FADE_START = 6.0s`, `UI_CONTROL_HINT_FADE_END = 8.0s`), and cleanly re-emerges whenever the pause menu is opened.
+  - **Animated Level Title Banner:** A prominent banner showcasing the course title appears centered at level start and smoothly fades out after 2.0 seconds (`UI_LEVEL_TITLE_DURATION = 2.0s`).
+  - **Toggleable FPS Counter:** FPS display is disabled by default and can be toggled on/off at any time using the `F3` function key.
+
+
 
 
 
