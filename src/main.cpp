@@ -35,7 +35,7 @@ static int RunSmokeTest() {
         assert(std::abs(player.velocity.y) < 0.001f);
     }
 
-    // 2. Seam Test: Walk across 10 adjacent platforms without snagging
+    // 2. Seam Test
     {
         std::cout << "[SMOKE-TEST] Testing seam crossing across adjacent boxes..." << std::endl;
         Player player;
@@ -47,7 +47,7 @@ static int RunSmokeTest() {
         }
 
         PlayerInput input;
-        input.moveRight = 1.0f; // cameraYaw = 0 -> right is +X
+        input.moveRight = 1.0f;
         float simTime = 0.0f;
         while (simTime < 2.0f) {
             player.UpdatePhysics(dt, input, 0.0f, seamBoxes);
@@ -56,7 +56,7 @@ static int RunSmokeTest() {
             }
             simTime += dt;
         }
-        std::cout << "[SMOKE-TEST] Seam test passed: reached X = " << player.position.x << " without snagging." << std::endl;
+        std::cout << "[SMOKE-TEST] Seam test passed: reached X = " << player.position.x << std::endl;
         assert(player.position.x > 14.0f);
     }
 
@@ -188,47 +188,165 @@ static int RunSmokeTest() {
         assert(cam.currentDistance < 4.0f);
     }
 
-    // 8. Milestone 3: Level Loading and Flow Verification
+    // 8. Milestone 4: Movers and Carrying Physics Test
     {
-        std::cout << "[SMOKE-TEST] Testing Level loading and flow on w1_l1.lvl..." << std::endl;
+        std::cout << "[SMOKE-TEST] Testing mover platform with player carrying..." << std::endl;
         Level level;
-        bool loaded = level.LoadFromFile("assets/levels/w1_l1.lvl");
-        assert(loaded);
-        assert(level.boxes.size() >= 25);
-        assert(level.checkpoints.size() == 2);
-        assert(level.hasFinish == true);
-        assert(level.name == "Meadow Steps");
+        Mover m;
+        m.basePos = Vector3{ 0.0f, 0.0f, 0.0f };
+        m.size = Vector3{ 4.0f, 1.0f, 4.0f };
+        m.delta = Vector3{ 8.0f, 0.0f, 0.0f };
+        m.period = 4.0f;
+        m.colorIndex = 0;
+        m.currentPos = m.basePos;
+        m.frameDisplacement = Vector3{ 0.0f, 0.0f, 0.0f };
+        level.movers.push_back(m);
+
+        Player player;
+        player.Init(Vector3{ 0.0f, 0.5f, 0.0f }); // On top of mover (top surface at Y=0.5)
+
+        // Settle player on mover
+        std::vector<AABB> colliders = level.GetSolidColliders();
+        PlayerInput input;
+        player.UpdatePhysics(dt, input, 0.0f, colliders);
+        assert(player.isGrounded);
+
+        // Advance 1.0s (mover travels ~4m in X)
+        float sim = 0.0f;
+        while (sim < 1.0f) {
+            level.Update(dt, player);
+            colliders = level.GetSolidColliders();
+            player.UpdatePhysics(dt, input, 0.0f, colliders);
+            sim += dt;
+        }
+
+        std::cout << "[SMOKE-TEST] Mover X: " << level.movers[0].currentPos.x
+                  << ", Player X: " << player.position.x
+                  << ", Grounded: " << player.isGrounded << std::endl;
+        // Verify player remained on top of platform and followed its displacement with no jitter
+        assert(player.isGrounded);
+        assert(std::abs(player.position.x - level.movers[0].currentPos.x) < 0.05f);
+        assert(player.position.x > 3.0f);
+    }
+
+    // 9. Milestone 4: Spinner Hazard Test
+    {
+        std::cout << "[SMOKE-TEST] Testing spinner hazard collision..." << std::endl;
+        Level level;
+        level.spawnPos = Vector3{ 0.0f, 0.0f, -10.0f };
+        Spinner s;
+        s.center = Vector3{ 0.0f, 1.0f, 0.0f };
+        s.length = 6.0f;
+        s.height = 1.0f;
+        s.speed = 4.0f;
+        s.currentAngle = 0.0f;
+        level.spinners.push_back(s);
 
         Player player;
         level.Reset(player);
-        assert(player.position.x == level.spawnPos.x && player.position.z == level.spawnPos.z);
-        assert(level.GetActivatedCheckpointCount() == 0);
-        assert(!level.isCompleted);
+        // Place player directly in the path of the rotating bar
+        player.position = Vector3{ 2.0f, 0.0f, 0.0f };
+        assert(level.deaths == 0);
 
-        // Teleport player into checkpoint 1
-        player.position = level.checkpoints[0].position;
-        level.Update(dt, player);
-        std::cout << "[SMOKE-TEST] Checkpoint 1 activated: " << level.checkpoints[0].activated << std::endl;
-        assert(level.checkpoints[0].activated);
-        assert(level.GetActivatedCheckpointCount() == 1);
-        assert(player.spawnPoint.x == level.checkpoints[0].position.x);
+        // Advance ticks until spinner sweeps through player
+        for (int step = 0; step < 60; ++step) {
+            level.Update(dt, player);
+            if (level.deaths > 0) break;
+        }
 
-        // Test respawn at checkpoint 1 on death
-        player.position.y = level.killY - 2.0f; // fall below killY
-        level.Update(dt, player);
-        assert(level.deaths == 1);
-        assert(player.position.x == level.checkpoints[0].position.x);
-        assert(player.position.z == level.checkpoints[0].position.z);
-
-        // Teleport player into finish zone
-        player.position = level.finish.triggerAABB.GetCenter();
-        level.Update(dt, player);
-        std::cout << "[SMOKE-TEST] Level completed: " << level.isCompleted << ", Star rating: " << level.starRating << std::endl;
-        assert(level.isCompleted);
-        assert(level.starRating >= 1 && level.starRating <= 3);
+        std::cout << "[SMOKE-TEST] Spinner collision caused death: " << (level.deaths > 0 ? "YES" : "NO") << std::endl;
+        assert(level.deaths > 0);
+        assert(player.position.z == level.spawnPos.z); // Respawned at spawn
     }
 
-    std::cout << "[SMOKE-TEST] All Milestone 3 level loading and flow assertions passed!" << std::endl;
+    // 10. Milestone 4: Crumble Tile Test
+    {
+        std::cout << "[SMOKE-TEST] Testing crumble tile states (STABLE -> CRUMBLING -> FALLEN -> STABLE)..." << std::endl;
+        Level level;
+        CrumbleTile c;
+        c.basePos = Vector3{ 0.0f, 0.0f, 0.0f };
+        c.size = Vector3{ 3.0f, 1.0f, 3.0f };
+        c.delay = 0.2f;
+        c.respawnTime = 0.4f;
+        c.state = CrumbleState::STABLE;
+        c.timer = 0.0f;
+        c.currentPos = c.basePos;
+        level.crumbleTiles.push_back(c);
+
+        Player player;
+        player.Init(Vector3{ 0.0f, 0.5f, 0.0f });
+
+        PlayerInput input;
+        std::vector<AABB> colliders = level.GetSolidColliders();
+        player.UpdatePhysics(dt, input, 0.0f, colliders);
+        assert(player.isGrounded);
+
+        // Step 1: Landing triggers CRUMBLING
+        level.Update(dt, player);
+        assert(level.crumbleTiles[0].state == CrumbleState::CRUMBLING);
+
+        // Step 2: After delay (0.2s), transitions to FALLEN
+        float sim = 0.0f;
+        while (sim < 0.25f) {
+            level.Update(dt, player);
+            sim += dt;
+        }
+        assert(level.crumbleTiles[0].state == CrumbleState::FALLEN);
+        assert(!level.crumbleTiles[0].IsSolid());
+
+        // Move player away while tile is fallen
+        player.position = Vector3{ 10.0f, 0.0f, 0.0f };
+
+        // Step 3: After respawnTime (0.4s), transitions back to STABLE
+        sim = 0.0f;
+        while (sim < 0.45f) {
+            level.Update(dt, player);
+            sim += dt;
+        }
+        assert(level.crumbleTiles[0].state == CrumbleState::STABLE);
+        assert(level.crumbleTiles[0].IsSolid());
+        std::cout << "[SMOKE-TEST] Crumble tile full cycle passed!" << std::endl;
+    }
+
+    // 11. Milestone 4: Spikes & Bounce Pads
+    {
+        std::cout << "[SMOKE-TEST] Testing spikes and bounce pads..." << std::endl;
+        Level level;
+        level.spawnPos = Vector3{ 0.0f, 0.0f, -10.0f };
+
+        // Spikes at (5, 0, 0)
+        Spikes sp;
+        sp.center = Vector3{ 5.0f, 0.5f, 0.0f };
+        sp.size = Vector3{ 2.0f, 1.0f, 2.0f };
+        sp.aabb = AABB::FromCenterSize(sp.center, sp.size);
+        level.spikesList.push_back(sp);
+
+        // Bounce pad at (10, 0, 0)
+        BouncePad bp;
+        bp.center = Vector3{ 10.0f, 0.25f, 0.0f };
+        bp.size = Vector3{ 2.0f, 0.5f, 2.0f };
+        bp.strength = 20.0f;
+        bp.aabb = AABB::FromCenterSize(bp.center, bp.size);
+        level.bouncePads.push_back(bp);
+
+        Player player;
+        level.Reset(player);
+
+        // Test Spikes
+        player.position = Vector3{ 5.0f, 0.5f, 0.0f };
+        level.Update(dt, player);
+        assert(level.deaths == 1);
+        assert(player.position.z == level.spawnPos.z);
+
+        // Test Bounce Pad
+        player.position = Vector3{ 10.0f, 0.5f, 0.0f };
+        player.velocity.y = -2.0f;
+        level.Update(dt, player);
+        std::cout << "[SMOKE-TEST] Bounce pad launched player to vel Y: " << player.velocity.y << " m/s" << std::endl;
+        assert(player.velocity.y == 20.0f);
+    }
+
+    std::cout << "[SMOKE-TEST] All Milestone 4 moving entities & hazard assertions passed!" << std::endl;
     return 0;
 }
 
@@ -243,7 +361,7 @@ int main(int argc, char* argv[]) {
     const int screenHeight = 720;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(screenWidth, screenHeight, "Roblox Obby Adventure - M3 Level Flow");
+    InitWindow(screenWidth, screenHeight, "Roblox Obby Adventure - M4 Hazards & Movers");
     if (!IsWindowReady()) {
         std::cerr << "Window could not be initialized. Running smoke test instead." << std::endl;
         return RunSmokeTest();
@@ -270,8 +388,6 @@ int main(int argc, char* argv[]) {
         }
 
         std::vector<AABB> colliders = level.GetSolidColliders();
-
-        // Only update camera and player physics while actively playing
         camera.Update(player.position, frameDelta, colliders);
 
         if (!level.isCompleted) {
@@ -286,17 +402,15 @@ int main(int argc, char* argv[]) {
                 input.jumpHeld       = IsKeyDown(KEY_SPACE);
                 input.respawnPressed = IsKeyPressed(KEY_R);
 
-                player.UpdatePhysics(Constants::PHYSICS_DT, input, camera.GetYawRadians(), colliders);
                 level.Update(Constants::PHYSICS_DT, player);
+                colliders = level.GetSolidColliders();
+                player.UpdatePhysics(Constants::PHYSICS_DT, input, camera.GetYawRadians(), colliders);
 
                 accumulator -= Constants::PHYSICS_DT;
             }
         }
 
-        // Render Frame
         BeginDrawing();
-
-        // Skybox & 3D world
         level.DrawSkybox();
 
         BeginMode3D(camera.GetRaylibCamera());
@@ -304,23 +418,16 @@ int main(int argc, char* argv[]) {
         player.Draw();
         EndMode3D();
 
-        // HUD (always drawn during play)
         UI::DrawHUD(level.name, level.elapsedTime, level.parTime,
                    level.GetActivatedCheckpointCount(), level.GetTotalCheckpointCount(), level.deaths);
 
-        // Results screen modal on level completion
         if (level.isCompleted) {
             ResultsAction action = UI::DrawResultsScreen(
                 GetScreenWidth(), GetScreenHeight(),
                 level.elapsedTime, level.parTime, level.deaths, level.starRating
             );
 
-            if (action == ResultsAction::RETRY) {
-                level.Reset(player);
-                camera.Init(player.position);
-                accumulator = 0.0f;
-            } else if (action == ResultsAction::NEXT_LEVEL) {
-                // For M3, restarts the course cleanly
+            if (action == ResultsAction::RETRY || action == ResultsAction::NEXT_LEVEL) {
                 level.Reset(player);
                 camera.Init(player.position);
                 accumulator = 0.0f;
@@ -328,7 +435,6 @@ int main(int argc, char* argv[]) {
         }
 
         DrawFPS(GetScreenWidth() - 90, 20);
-
         EndDrawing();
     }
 

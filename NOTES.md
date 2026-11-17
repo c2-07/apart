@@ -59,4 +59,15 @@ cmake --build build
   - Results screen dialog modal displaying final time, deaths, 1-3 star rating calculation based on par time, with interactive Retry and Next buttons.
   - Automated smoke test verifying parsing, checkpoint triggers, respawn points, and finish trigger.
 
+### Milestone 4: Moving Things & Hazards
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - Moving platforms (`mover`): smooth sine-wave ping-pong trajectories with carrier physics that displace the player by frame displacement with zero jitter.
+  - Rotating spinner hazards (`spinner`): analytical XZ segment-to-player collision with Y-height overlap; touches are fatal hazards that trigger respawns.
+  - Crumble tiles (`crumble`): 3-state state machine (`STABLE` -> `CRUMBLING` with visual rumble shake -> `FALLEN` non-solid -> `STABLE` respawn).
+  - Hazard spikes (`spikes`): drawn as 3D pyramids; fatal on contact.
+  - Bounce pads (`bounce`): launch pads with customizable impulse strength propelling the player upward into high arcs.
+  - Automated smoke tests verifying mover carrying with zero relative drift, spinner sweep detection, crumble state lifecycle, spike collision, and bounce pad velocity.
+
+
 
