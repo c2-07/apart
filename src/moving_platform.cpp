@@ -31,17 +31,15 @@ void MovingPlatform::update(float dt, Player& player) {
     m_frameDisplacement = pos1 - pos0;
 
     AABB moverAABB = getBounds();
-    AABB playerAABB = player.GetAABB();
+    AABB playerAABB = player.getBounds();
 
-    bool standingOnTop = player.isGrounded &&
-                         (std::abs(player.position.y - moverAABB.getMax().y) < 0.05f) &&
+    bool standingOnTop = player.isGrounded() &&
+                         (std::abs(player.getPosition().y - moverAABB.getMax().y) < 0.05f) &&
                          (playerAABB.getMin().x < moverAABB.getMax().x && playerAABB.getMax().x > moverAABB.getMin().x) &&
                          (playerAABB.getMin().z < moverAABB.getMax().z && playerAABB.getMax().z > moverAABB.getMin().z);
 
     if (standingOnTop) {
-        player.position.x += m_frameDisplacement.x;
-        player.position.y += m_frameDisplacement.y;
-        player.position.z += m_frameDisplacement.z;
+        player.setPosition(player.getPosition() + m_frameDisplacement);
     }
 }
 

@@ -12,14 +12,14 @@ Spikes::Spikes(const Vec3& position, const Vec3& size)
 
 void Spikes::update(float dt, Player& player) {
     (void)dt;
-    if (getBounds().intersects(player.GetAABB())) {
+    if (getBounds().intersects(player.getBounds())) {
         onPlayerTouch(player);
     }
 }
 
 void Spikes::onPlayerTouch(Player& player) {
-    player.deathCount++;
-    player.Respawn();
+    player.setDeathCount(player.getDeathCount() + 1);
+    player.respawn();
     AudioManager::Play(SoundId::DEATH);
 }
 

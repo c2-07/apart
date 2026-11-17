@@ -294,7 +294,7 @@ cmake --build build
   - `Door`: Barrier door linked to button IDs with state-dependent solidity.
 
 #### Step 3: Polymorphic Level Container, EntityFactory & LevelParseError
-- **Status:** COMPLETED
+- **Status:** COMPLETED (Commit: `661e288`)
 - **Details:**
   - Implemented `Level` class owning all entities inside `std::vector<std::unique_ptr<Entity>>`.
   - Dispatched `Update()` and `Draw()` polymorphically across all entities through base `Entity*` pointers with zero type switching or downcasting in the main loop.
@@ -302,6 +302,14 @@ cmake --build build
   - Implemented custom exception `LevelParseError : public std::runtime_error` for robust level loading error handling.
   - Integrated `GhostRecorder` component for recording and replaying player clone actions for puzzle solving.
   - Verified 100% test pass on headless smoke tests and all 20 levels in the reachability validator.
+
+#### Step 4: Encapsulated Player, PlayerAnimator & CameraController
+- **Status:** COMPLETED
+- **Details:**
+  - Encapsulated `Player` class with private state members (`m_position`, `m_velocity`, `m_modelYaw`, `m_isGrounded`, `m_coyoteTimer`, `m_jumpBufferTimer`, `m_deathCount`, etc.) and public accessor/mutator interfaces (`getPosition()`, `setPosition()`, `getVelocity()`, `setVelocity()`, `jump()`, `applyImpulse()`, `respawn()`, `getBounds()`).
+  - Extracted procedural character animation, limb kinematics, squash-and-stretch, lean dynamics, and contact blob shadow projection into a dedicated `PlayerAnimator` class (`src/player_animator.h/.cpp`).
+  - Refactored `OrbitCamera` into an encapsulated `CameraController` class (`src/camera_controller.h/.cpp`) managing spherical orbit trigonometry, target smoothing, movement lookahead, dynamic velocity-proportional FOV, and obstacle raycast occlusion pull-in.
+  - Updated all entity interactions and test assertions to use clean accessor and mutator methods. Passed all headless smoke tests and level reachability suites.
 
 
 

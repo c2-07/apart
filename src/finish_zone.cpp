@@ -16,7 +16,7 @@ FinishZone::FinishZone(const Vec3& position, const Vec3& size)
 void FinishZone::update(float dt, Player& player) {
     m_animTimer += dt;
     if (!m_completed) {
-        if (getBounds().intersects(player.GetAABB())) {
+        if (getBounds().intersects(player.getBounds())) {
             onPlayerTouch(player);
         }
     }

@@ -176,7 +176,7 @@ void Level::Reset(Player& player) {
         m_finishZone->setCompleted(false);
     }
 
-    player.Init(m_spawnPos.toRaylib());
+    player.init(m_spawnPos);
 }
 
 void Level::Update(float dt, Player& player, ParticleSystem* particles) {
@@ -186,7 +186,7 @@ void Level::Update(float dt, Player& player, ParticleSystem* particles) {
 
     // Ghost recorder tick
     if (ghost.state == GhostRecorder::State::RECORDING) {
-        ghost.RecordTick(player.position, player.modelYaw, player.isGrounded);
+        ghost.RecordTick(player.getPosition().toRaylib(), player.getModelYaw(), player.isGrounded());
     } else if (ghost.state == GhostRecorder::State::PLAYING) {
         ghost.UpdatePlayback();
     }
@@ -232,10 +232,10 @@ void Level::Update(float dt, Player& player, ParticleSystem* particles) {
     }
 
     // Check kill plane
-    if (player.position.y < m_killY) {
+    if (player.getPosition().y < m_killY) {
         deaths++;
-        player.deathCount = deaths;
-        player.Respawn();
+        player.setDeathCount(deaths);
+        player.respawn();
         AudioManager::Play(SoundId::DEATH);
     }
 }

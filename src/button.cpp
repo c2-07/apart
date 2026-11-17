@@ -48,7 +48,7 @@ void Button::onPlayerTouch(Player& player) {
 }
 
 void Button::update(float dt, Player& player) {
-    bool touching = getTriggerBounds().intersects(player.GetAABB());
+    bool touching = getTriggerBounds().intersects(player.getBounds());
     m_isPressed = (touching || m_ghostTouching);
     if (m_isPressed) {
         m_currentTimer = m_duration;

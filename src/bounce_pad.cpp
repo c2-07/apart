@@ -14,10 +14,10 @@ BouncePad::BouncePad(const Vec3& position, const Vec3& size, float strength)
 void BouncePad::update(float dt, Player& player) {
     (void)dt;
     AABB padAABB = getBounds();
-    AABB playerAABB = player.GetAABB();
+    AABB playerAABB = player.getBounds();
 
-    bool standingOnPad = player.isGrounded &&
-                         (std::abs(player.position.y - padAABB.getMax().y) < 0.08f) &&
+    bool standingOnPad = player.isGrounded() &&
+                         (std::abs(player.getPosition().y - padAABB.getMax().y) < 0.08f) &&
                          (playerAABB.getMin().x < padAABB.getMax().x && playerAABB.getMax().x > padAABB.getMin().x) &&
                          (playerAABB.getMin().z < padAABB.getMax().z && playerAABB.getMax().z > padAABB.getMin().z);
 
@@ -27,8 +27,10 @@ void BouncePad::update(float dt, Player& player) {
 }
 
 void BouncePad::onPlayerTouch(Player& player) {
-    player.velocity.y = m_strength;
-    player.isGrounded = false;
+    Vec3 vel = player.getVelocity();
+    vel.y = m_strength;
+    player.setVelocity(vel);
+    player.setGrounded(false);
     AudioManager::Play(SoundId::JUMP);
 }
 

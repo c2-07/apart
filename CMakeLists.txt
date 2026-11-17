@@ -37,6 +37,8 @@ add_executable(obby
     src/button.cpp
     src/door.cpp
     src/ghost_recorder.cpp
+    src/camera_controller.cpp
+    src/player_animator.cpp
     src/game.cpp
     src/collision.cpp
     src/camera.cpp

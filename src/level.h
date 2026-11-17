@@ -13,9 +13,9 @@
 #include <vector>
 #include <memory>
 
-struct Player;
-
 namespace obby {
+
+class Player;
 
 /**
  * @brief Represents a platforming course containing polymorphically managed entities.

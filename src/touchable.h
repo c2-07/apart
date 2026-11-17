@@ -1,8 +1,8 @@
 #pragma once
 
-struct Player;
-
 namespace obby {
+
+class Player;
 
 /**
  * @brief Pure abstract interface for entities that react to player interaction.

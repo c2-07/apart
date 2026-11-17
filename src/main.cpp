@@ -33,27 +33,27 @@ static int RunSmokeTest() {
     // 1. Basic Gravity and Landing
     {
         Player player;
-        player.Init(Vector3{ 0.0f, 5.0f, 0.0f });
+        player.init(Vec3{ 0.0f, 5.0f, 0.0f });
         std::vector<AABB> colliders = {
             AABB::FromCenterSize(Vector3{ 0.0f, -0.5f, 0.0f }, Vector3{ 20.0f, 1.0f, 20.0f })
         };
         PlayerInput input;
         float simTime = 0.0f;
         while (simTime < 1.0f) {
-            player.UpdatePhysics(dt, input, 0.0f, colliders);
+            player.updatePhysics(dt, input, 0.0f, colliders);
             simTime += dt;
         }
-        std::cout << "[SMOKE-TEST] Landed Y: " << player.position.y << ", Grounded: " << player.isGrounded << std::endl;
-        assert(std::abs(player.position.y - 0.0f) < 0.001f);
-        assert(player.isGrounded == true);
-        assert(std::abs(player.velocity.y) < 0.001f);
+        std::cout << "[SMOKE-TEST] Landed Y: " << player.getPosition().y << ", Grounded: " << player.isGrounded() << std::endl;
+        assert(std::abs(player.getPosition().y - 0.0f) < 0.001f);
+        assert(player.isGrounded() == true);
+        assert(std::abs(player.getVelocity().y) < 0.001f);
     }
 
     // 2. Seam Test
     {
         std::cout << "[SMOKE-TEST] Testing seam crossing across adjacent boxes..." << std::endl;
         Player player;
-        player.Init(Vector3{ 0.5f, 0.0f, 0.0f });
+        player.init(Vec3{ 0.5f, 0.0f, 0.0f });
 
         std::vector<AABB> seamBoxes;
         for (int i = 0; i < 10; ++i) {
@@ -64,44 +64,44 @@ static int RunSmokeTest() {
         input.moveRight = 1.0f;
         float simTime = 0.0f;
         while (simTime < 2.0f) {
-            player.UpdatePhysics(dt, input, 0.0f, seamBoxes);
+            player.updatePhysics(dt, input, 0.0f, seamBoxes);
             if (simTime > 0.3f) {
-                assert(player.velocity.x > 7.0f);
+                assert(player.getVelocity().x > 7.0f);
             }
             simTime += dt;
         }
-        std::cout << "[SMOKE-TEST] Seam test passed: reached X = " << player.position.x << std::endl;
-        assert(player.position.x > 14.0f);
+        std::cout << "[SMOKE-TEST] Seam test passed: reached X = " << player.getPosition().x << std::endl;
+        assert(player.getPosition().x > 14.0f);
     }
 
     // 3. High-Speed Wall Test
     {
         std::cout << "[SMOKE-TEST] Testing high-speed wall collision..." << std::endl;
         Player player;
-        player.Init(Vector3{ 0.0f, 0.0f, 0.0f });
+        player.init(Vec3{ 0.0f, 0.0f, 0.0f });
 
         std::vector<AABB> wallBoxes = {
             AABB::FromMinSize(Vector3{ -5.0f, -1.0f, -5.0f }, Vector3{ 20.0f, 1.0f, 10.0f }),
             AABB::FromMinSize(Vector3{ 8.0f, 0.0f, -5.0f }, Vector3{ 2.0f, 4.0f, 10.0f })
         };
 
-        player.velocity.x = 80.0f;
+        player.setVelocity(Vec3{ 80.0f, 0.0f, 0.0f });
         PlayerInput input;
         for (int step = 0; step < 60; ++step) {
-            player.UpdatePhysics(dt, input, 0.0f, wallBoxes);
+            player.updatePhysics(dt, input, 0.0f, wallBoxes);
         }
         float expectedX = 8.0f - Constants::HALF_PLAYER_WIDTH;
-        std::cout << "[SMOKE-TEST] Wall impact stopped at X = " << player.position.x << " (expected " << expectedX << ")" << std::endl;
-        assert(std::abs(player.position.x - expectedX) < 0.001f);
-        assert(player.velocity.x == 0.0f);
+        std::cout << "[SMOKE-TEST] Wall impact stopped at X = " << player.getPosition().x << " (expected " << expectedX << ")" << std::endl;
+        assert(std::abs(player.getPosition().x - expectedX) < 0.001f);
+        assert(player.getVelocity().x == 0.0f);
     }
 
     // 4. Thin Platform Tunneling Test
     {
         std::cout << "[SMOKE-TEST] Testing thin platform tunneling prevention..." << std::endl;
         Player player;
-        player.Init(Vector3{ 0.0f, 8.0f, 0.0f });
-        player.velocity.y = Constants::TERMINAL_VELOCITY;
+        player.init(Vec3{ 0.0f, 8.0f, 0.0f });
+        player.setVelocity(Vec3{ 0.0f, Constants::TERMINAL_VELOCITY, 0.0f });
 
         std::vector<AABB> thinBoxes = {
             AABB::FromMinSize(Vector3{ -5.0f, -0.05f, -5.0f }, Vector3{ 10.0f, 0.05f, 10.0f })
@@ -109,53 +109,53 @@ static int RunSmokeTest() {
 
         PlayerInput input;
         for (int step = 0; step < 60; ++step) {
-            player.UpdatePhysics(dt, input, 0.0f, thinBoxes);
+            player.updatePhysics(dt, input, 0.0f, thinBoxes);
         }
-        std::cout << "[SMOKE-TEST] Landed on thin platform at Y = " << player.position.y << ", Grounded: " << player.isGrounded << std::endl;
-        assert(std::abs(player.position.y - 0.0f) < 0.001f);
-        assert(player.isGrounded == true);
+        std::cout << "[SMOKE-TEST] Landed on thin platform at Y = " << player.getPosition().y << ", Grounded: " << player.isGrounded() << std::endl;
+        assert(std::abs(player.getPosition().y - 0.0f) < 0.001f);
+        assert(player.isGrounded() == true);
     }
 
     // 5. Coyote Time Test
     {
         std::cout << "[SMOKE-TEST] Testing coyote time..." << std::endl;
         Player player;
-        player.Init(Vector3{ 0.0f, 0.0f, 0.0f });
+        player.init(Vec3{ 0.0f, 0.0f, 0.0f });
         std::vector<AABB> ledgeBoxes = {
             AABB::FromMinSize(Vector3{ -5.0f, -1.0f, -5.0f }, Vector3{ 7.0f, 1.0f, 10.0f })
         };
 
         PlayerInput input;
-        player.UpdatePhysics(dt, input, 0.0f, ledgeBoxes);
-        assert(player.isGrounded);
+        player.updatePhysics(dt, input, 0.0f, ledgeBoxes);
+        assert(player.isGrounded());
 
         input.moveRight = 1.0f;
         int safetyTicks = 0;
-        while (player.isGrounded && safetyTicks < 400) {
-            player.UpdatePhysics(dt, input, 0.0f, ledgeBoxes);
+        while (player.isGrounded() && safetyTicks < 400) {
+            player.updatePhysics(dt, input, 0.0f, ledgeBoxes);
             safetyTicks++;
         }
-        assert(!player.isGrounded);
-        assert(player.position.x > 2.0f);
+        assert(!player.isGrounded());
+        assert(player.getPosition().x > 2.0f);
 
         for (int step = 0; step < 4; ++step) {
-            player.UpdatePhysics(dt, input, 0.0f, ledgeBoxes);
+            player.updatePhysics(dt, input, 0.0f, ledgeBoxes);
         }
-        assert(!player.isGrounded);
-        assert(player.coyoteTimer > 0.0f);
+        assert(!player.isGrounded());
+        assert(player.getCoyoteTimer() > 0.0f);
 
         input.jumpPressed = true;
-        player.UpdatePhysics(dt, input, 0.0f, ledgeBoxes);
-        std::cout << "[SMOKE-TEST] Coyote jump velocity Y = " << player.velocity.y << " m/s" << std::endl;
-        assert(player.velocity.y > 10.0f);
+        player.updatePhysics(dt, input, 0.0f, ledgeBoxes);
+        std::cout << "[SMOKE-TEST] Coyote jump velocity Y = " << player.getVelocity().y << " m/s" << std::endl;
+        assert(player.getVelocity().y > 10.0f);
     }
 
     // 6. Jump Buffering Test
     {
         std::cout << "[SMOKE-TEST] Testing jump buffering..." << std::endl;
         Player player;
-        player.Init(Vector3{ 0.0f, 0.3f, 0.0f });
-        player.velocity.y = -5.0f;
+        player.init(Vec3{ 0.0f, 0.3f, 0.0f });
+        player.setVelocity(Vec3{ 0.0f, -5.0f, 0.0f });
 
         std::vector<AABB> groundBoxes = {
             AABB::FromMinSize(Vector3{ -5.0f, -1.0f, -5.0f }, Vector3{ 10.0f, 1.0f, 10.0f })
@@ -163,20 +163,20 @@ static int RunSmokeTest() {
 
         PlayerInput input;
         input.jumpPressed = true;
-        player.UpdatePhysics(dt, input, 0.0f, groundBoxes);
+        player.updatePhysics(dt, input, 0.0f, groundBoxes);
         input.jumpPressed = false;
-        assert(player.jumpBufferTimer > 0.0f);
+        assert(player.getJumpBufferTimer() > 0.0f);
 
         bool jumpFired = false;
         for (int step = 0; step < 15; ++step) {
-            player.UpdatePhysics(dt, input, 0.0f, groundBoxes);
-            if (player.velocity.y > 8.0f) {
+            player.updatePhysics(dt, input, 0.0f, groundBoxes);
+            if (player.getVelocity().y > 8.0f) {
                 jumpFired = true;
                 break;
             }
         }
         std::cout << "[SMOKE-TEST] Buffered jump fired: " << (jumpFired ? "YES" : "NO")
-                  << " (vel Y = " << player.velocity.y << " m/s)" << std::endl;
+                  << " (vel Y = " << player.getVelocity().y << " m/s)" << std::endl;
         assert(jumpFired);
     }
 
@@ -184,22 +184,22 @@ static int RunSmokeTest() {
     {
         std::cout << "[SMOKE-TEST] Testing camera obstacle pull-in..." << std::endl;
         OrbitCamera cam;
-        Vector3 playerBase = { 0.0f, 0.0f, 0.0f };
-        cam.Init(playerBase);
-        cam.yaw = 0.0f;
-        cam.pitch = 0.0f;
-        cam.targetDistance = 10.0f;
+        Vec3 playerBase = { 0.0f, 0.0f, 0.0f };
+        cam.init(playerBase);
+        cam.setYaw(0.0f);
+        cam.setPitch(0.0f);
+        cam.setTargetDistance(10.0f);
 
         std::vector<AABB> obstacles = {
             AABB::FromCenterSize(Vector3{ 0.0f, Constants::CAM_TARGET_HEIGHT, 3.0f }, Vector3{ 2.0f, 2.0f, 0.4f })
         };
 
         for (int f = 0; f < 30; ++f) {
-            cam.Update(playerBase, 0.016f, obstacles);
+            cam.update(playerBase, 0.016f, obstacles);
         }
 
-        std::cout << "[SMOKE-TEST] Camera pulled in to distance: " << cam.currentDistance << " m (target was 10.0)" << std::endl;
-        assert(cam.currentDistance < 4.0f);
+        std::cout << "[SMOKE-TEST] Camera pulled in to distance: " << cam.getCurrentDistance() << " m (target was 10.0)" << std::endl;
+        assert(cam.getCurrentDistance() < 4.0f);
     }
 
     // 8. Milestone 6: Timed Route Puzzle Verification
@@ -212,7 +212,7 @@ static int RunSmokeTest() {
         level.Reset(player);
         assert(!level.getDoor(0)->isOpen());
 
-        player.position = level.getButton(0)->getPosition();
+        player.setPosition(level.getButton(0)->getPosition());
         level.Update(dt, player);
         assert(level.getButton(0)->isActive());
         assert(level.getDoor(0)->isOpen());
@@ -228,11 +228,11 @@ static int RunSmokeTest() {
         level.Reset(player);
 
         level.ghost.StartRecording();
-        player.position = level.getButton(0)->getPosition();
+        player.setPosition(level.getButton(0)->getPosition());
         for (int i = 0; i < 120; ++i) level.Update(dt, player);
         level.ghost.StopRecording();
 
-        player.position = level.getSpawnPos();
+        player.setPosition(level.getSpawnPos());
         for (int i = 0; i < 60; ++i) level.Update(dt, player);
         assert(level.getButton(0)->isPressed());
         assert(level.getDoor(0)->isOpen());

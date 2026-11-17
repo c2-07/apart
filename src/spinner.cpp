@@ -43,14 +43,14 @@ bool Spinner::checkOverlapWithPlayer(const AABB& playerAABB) const {
 
 void Spinner::update(float dt, Player& player) {
     m_angle += m_speed * dt;
-    if (checkOverlapWithPlayer(player.GetAABB())) {
+    if (checkOverlapWithPlayer(player.getBounds())) {
         onPlayerTouch(player);
     }
 }
 
 void Spinner::onPlayerTouch(Player& player) {
-    player.deathCount++;
-    player.Respawn();
+    player.setDeathCount(player.getDeathCount() + 1);
+    player.respawn();
     AudioManager::Play(SoundId::DEATH);
 }
 

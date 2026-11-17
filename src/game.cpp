@@ -105,7 +105,7 @@ void Game::Init() {
     save.Load();
     AudioManager::SetVolume(save.volume);
 
-    player.colorIndex = save.chosenColor;
+    player.setColorIndex(save.chosenColor);
     LoadLevelByIndex(0);
     state = AppState::MAIN_MENU;
 
@@ -143,7 +143,7 @@ void Game::Shutdown() {
         shaderLoaded = false;
     }
 
-    save.chosenColor = player.colorIndex;
+    save.chosenColor = player.getColorIndex();
     save.volume = AudioManager::GetVolume();
     save.Save();
 }
@@ -183,8 +183,8 @@ void Game::LoadLevelByIndex(int index) {
     currentLevelIdx = index;
     level.LoadFromFile(LEVEL_PATHS[currentLevelIdx]);
     level.Reset(player);
-    player.colorIndex = save.chosenColor;
-    camera.Init(player.position);
+    player.setColorIndex(save.chosenColor);
+    camera.init(player.getPosition());
     particles.Clear();
     previousDeaths = 0;
     screenShakeTimer = 0.0f;
@@ -245,19 +245,19 @@ void Game::Draw() {
 
 void Game::UpdateMainMenu() {
     // Background slow camera orbit
-    camera.yaw += 12.0f * GetFrameTime();
+    camera.setYaw(camera.getYaw() + 12.0f * GetFrameTime());
     std::vector<AABB> colliders = level.GetSolidColliders();
-    camera.Update(player.position, GetFrameTime(), colliders);
+    camera.update(player.getPosition(), GetFrameTime(), colliders);
 }
 
 void Game::DrawMainMenu() {
     level.DrawSkybox();
-    BeginMode3D(camera.GetRaylibCamera());
-    ApplyLightingShader(camera.currentEye, level.worldId);
+    BeginMode3D(camera.getRaylibCamera());
+    ApplyLightingShader(camera.getCurrentEye().toRaylib(), level.worldId);
     level.Draw();
-    player.Draw();
+    player.draw();
     if (shaderLoaded) EndShaderMode();
-    player.DrawShadow(level.GetSolidColliders());
+    player.drawShadow(level.GetSolidColliders());
     EndMode3D();
 
     int sw = GetScreenWidth();
@@ -368,7 +368,7 @@ void Game::DrawLevelSelect() {
 }
 
 void Game::UpdateCharacterSelect() {
-    player.modelYaw += 1.5f * GetFrameTime();
+    player.setModelYaw(player.getModelYaw() + 1.5f * GetFrameTime());
 }
 
 void Game::DrawCharacterSelect() {
@@ -389,12 +389,12 @@ void Game::DrawCharacterSelect() {
     previewCam.projection = CAMERA_PERSPECTIVE;
 
     BeginMode3D(previewCam);
-    Vector3 oldPos = player.position;
-    player.position = Vector3{ 0.0f, 0.0f, 0.0f };
+    Vec3 oldPos = player.getPosition();
+    player.setPosition(Vec3{ 0.0f, 0.0f, 0.0f });
     ApplyLightingShader(previewCam.position, 1);
-    player.Draw();
+    player.draw();
     if (shaderLoaded) EndShaderMode();
-    player.position = oldPos;
+    player.setPosition(oldPos);
     EndMode3D();
 
     // Color Swatches
@@ -407,10 +407,10 @@ void Game::DrawCharacterSelect() {
     float startX = (sw - (6 * 140)) * 0.5f;
     for (int i = 0; i < 6; ++i) {
         Rectangle swatch = { startX + i * 140.0f, (float)(sh - 180), 120, 50 };
-        bool selected = (player.colorIndex == i);
+        bool selected = (player.getColorIndex() == i);
 
         if (UI::Button(swatch, colorNames[i], shirtColors[i], shirtColors[i], WHITE, 14)) {
-            player.colorIndex = i;
+            player.setColorIndex(i);
             save.chosenColor = i;
             save.Save();
         }
@@ -485,7 +485,7 @@ void Game::UpdatePlaying(float frameDelta) {
     // F1 Cheat: Noclip
     if (IsKeyPressed(KEY_F1)) {
         noclipMode = !noclipMode;
-        player.velocity = Vector3{ 0.0f, 0.0f, 0.0f };
+        player.setVelocity(Vec3{ 0.0f, 0.0f, 0.0f });
     }
 
     // T Cheat: Teleport
@@ -493,15 +493,15 @@ void Game::UpdatePlaying(float frameDelta) {
         bool teleported = false;
         for (const auto* cp : level.getCheckpoints()) {
             if (!cp->isActivated()) {
-                player.position = cp->getPosition();
-                player.velocity = Vector3{ 0.0f, 0.0f, 0.0f };
+                player.setPosition(cp->getPosition());
+                player.setVelocity(Vec3{ 0.0f, 0.0f, 0.0f });
                 teleported = true;
                 break;
             }
         }
         if (!teleported && level.getFinishZone() != nullptr) {
-            player.position = level.getFinishZone()->getBounds().getCenter();
-            player.velocity = Vector3{ 0.0f, 0.0f, 0.0f };
+            player.setPosition(level.getFinishZone()->getBounds().getCenter());
+            player.setVelocity(Vec3{ 0.0f, 0.0f, 0.0f });
         }
     }
 
@@ -511,8 +511,8 @@ void Game::UpdatePlaying(float frameDelta) {
             level.ghost.StartRecording();
         } else if (level.ghost.state == GhostRecorder::State::RECORDING) {
             level.ghost.StopRecording();
-            player.position = level.spawnPos;
-            player.velocity = Vector3{ 0.0f, 0.0f, 0.0f };
+            player.setPosition(level.spawnPos);
+            player.setVelocity(Vec3{ 0.0f, 0.0f, 0.0f });
         } else {
             level.ghost.Reset();
         }
@@ -521,7 +521,7 @@ void Game::UpdatePlaying(float frameDelta) {
     std::vector<AABB> colliders = level.GetSolidColliders();
 
     // Camera update with screen shake
-    Vector3 camFocus = player.position;
+    Vec3 camFocus = player.getPosition();
     if (screenShakeTimer > 0.0f) {
         screenShakeTimer -= frameDelta;
         float shakeProgress = screenShakeTimer / Constants::SCREEN_SHAKE_DURATION;
@@ -534,7 +534,7 @@ void Game::UpdatePlaying(float frameDelta) {
         camFocus.z += randOffset();
     }
 
-    camera.Update(camFocus, frameDelta, colliders, save.sensitivity, save.invertY, player.velocity);
+    camera.update(camFocus, frameDelta, colliders, save.sensitivity, save.invertY, player.getVelocity());
     particles.Update(frameDelta);
 
     levelPlayTime += frameDelta;
@@ -557,16 +557,18 @@ void Game::UpdatePlaying(float frameDelta) {
 
     if (noclipMode) {
         float flySpeed = 16.0f;
-        float yaw = camera.GetYawRadians();
-        Vector3 forward = { -sinf(yaw), 0.0f, -cosf(yaw) };
-        Vector3 right   = {  cosf(yaw), 0.0f, -sinf(yaw) };
+        float yaw = camera.getYawRadians();
+        Vec3 forward = { -sinf(yaw), 0.0f, -cosf(yaw) };
+        Vec3 right   = {  cosf(yaw), 0.0f, -sinf(yaw) };
 
-        if (IsKeyDown(KEY_W)) player.position = Vector3Add(player.position, Vector3Scale(forward, flySpeed * frameDelta));
-        if (IsKeyDown(KEY_S)) player.position = Vector3Subtract(player.position, Vector3Scale(forward, flySpeed * frameDelta));
-        if (IsKeyDown(KEY_D)) player.position = Vector3Add(player.position, Vector3Scale(right, flySpeed * frameDelta));
-        if (IsKeyDown(KEY_A)) player.position = Vector3Subtract(player.position, Vector3Scale(right, flySpeed * frameDelta));
-        if (IsKeyDown(KEY_SPACE)) player.position.y += flySpeed * frameDelta;
-        if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_C)) player.position.y -= flySpeed * frameDelta;
+        Vec3 pos = player.getPosition();
+        if (IsKeyDown(KEY_W)) pos += forward * (flySpeed * frameDelta);
+        if (IsKeyDown(KEY_S)) pos -= forward * (flySpeed * frameDelta);
+        if (IsKeyDown(KEY_D)) pos += right * (flySpeed * frameDelta);
+        if (IsKeyDown(KEY_A)) pos -= right * (flySpeed * frameDelta);
+        if (IsKeyDown(KEY_SPACE)) pos.y += flySpeed * frameDelta;
+        if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_C)) pos.y -= flySpeed * frameDelta;
+        player.setPosition(pos);
 
         level.Update(frameDelta, player, &particles);
     } else {
@@ -583,7 +585,7 @@ void Game::UpdatePlaying(float frameDelta) {
 
             level.Update(Constants::PHYSICS_DT, player, &particles);
             colliders = level.GetSolidColliders();
-            player.UpdatePhysics(Constants::PHYSICS_DT, input, camera.GetYawRadians(), colliders, &particles);
+            player.updatePhysics(Constants::PHYSICS_DT, input, camera.getYawRadians(), colliders, &particles);
 
             if (level.deaths > previousDeaths) {
                 previousDeaths = level.deaths;
@@ -606,12 +608,12 @@ void Game::DrawPlaying() {
     std::vector<AABB> colliders = level.GetSolidColliders();
 
     level.DrawSkybox();
-    BeginMode3D(camera.GetRaylibCamera());
-    ApplyLightingShader(camera.currentEye, level.worldId);
+    BeginMode3D(camera.getRaylibCamera());
+    ApplyLightingShader(camera.getCurrentEye().toRaylib(), level.worldId);
     level.Draw();
-    player.Draw();
+    player.draw();
     if (shaderLoaded) EndShaderMode();
-    player.DrawShadow(colliders);
+    player.drawShadow(colliders);
     particles.Draw();
     EndMode3D();
 

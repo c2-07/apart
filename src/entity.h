@@ -5,9 +5,9 @@
 #include "aabb.h"
 #include "raylib.h"
 
-struct Player;
-
 namespace obby {
+
+class Player;
 
 /**
  * @brief Abstract base class for all interactive game entities.

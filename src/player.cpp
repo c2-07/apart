@@ -2,47 +2,62 @@
 #include "constants.h"
 #include "audio.h"
 #include "raymath.h"
-#include "rlgl.h"
-
 #include <cmath>
 #include <algorithm>
 
-static Color DarkenColor(Color c, float factor) {
-    return Color{
-        static_cast<unsigned char>(c.r * factor),
-        static_cast<unsigned char>(c.g * factor),
-        static_cast<unsigned char>(c.b * factor),
-        c.a
-    };
+namespace obby {
+
+Player::Player()
+    : m_position(Vec3{ 0.0f, 0.0f, 0.0f }),
+      m_velocity(Vec3{ 0.0f, 0.0f, 0.0f }),
+      m_modelYaw(0.0f),
+      m_targetYaw(0.0f),
+      m_isGrounded(false),
+      m_wasGrounded(false),
+      m_coyoteTimer(0.0f),
+      m_jumpBufferTimer(0.0f),
+      m_deathCount(0),
+      m_isAlive(true),
+      m_spawnPoint(Vec3{ 0.0f, 0.0f, 0.0f }),
+      m_colorIndex(0),
+      m_animator() {}
+
+void Player::init(const Vec3& spawn) {
+    m_spawnPoint = spawn;
+    m_deathCount = 0;
+    m_colorIndex = 0;
+    m_wasGrounded = false;
+    m_animator.reset();
+    respawn();
 }
 
-void Player::Init(Vector3 spawn) {
-    spawnPoint = spawn;
-    deathCount = 0;
-    colorIndex = 0;
-    walkCycle = 0.0f;
-    landingTimer = 0.0f;
-    skidTimer = 0.0f;
-    wasGrounded = false;
-    Respawn();
+void Player::respawn() {
+    m_position = m_spawnPoint;
+    m_velocity = Vec3{ 0.0f, 0.0f, 0.0f };
+    m_modelYaw = 0.0f;
+    m_targetYaw = 0.0f;
+    m_isGrounded = false;
+    m_wasGrounded = false;
+    m_coyoteTimer = 0.0f;
+    m_jumpBufferTimer = 0.0f;
+    m_isAlive = true;
+    m_animator.reset();
 }
 
-void Player::Respawn() {
-    position = spawnPoint;
-    velocity = Vector3{ 0.0f, 0.0f, 0.0f };
-    modelYaw = 0.0f;
-    targetYaw = 0.0f;
-    isGrounded = false;
-    wasGrounded = false;
-    landingTimer = 0.0f;
-    skidTimer = 0.0f;
-    coyoteTimer = 0.0f;
-    jumpBufferTimer = 0.0f;
-    isAlive = true;
+void Player::jump() {
+    m_velocity.y = Constants::JUMP_VELOCITY;
+    m_jumpBufferTimer = 0.0f;
+    m_coyoteTimer = 0.0f;
+    m_isGrounded = false;
+    AudioManager::Play(SoundId::JUMP);
 }
 
-Color Player::GetShirtColor() const {
-    switch (colorIndex) {
+void Player::applyImpulse(const Vec3& impulse) {
+    m_velocity += impulse;
+}
+
+Color Player::getShirtColor() const {
+    switch (m_colorIndex) {
         case 1: return Color{ 225, 45, 55, 255 };   // Crimson Red
         case 2: return Color{ 45, 185, 95, 255 };   // Emerald Green
         case 3: return Color{ 145, 65, 215, 255 };  // Royal Purple
@@ -53,10 +68,10 @@ Color Player::GetShirtColor() const {
     }
 }
 
-AABB Player::GetAABB() const {
+AABB Player::getBounds() const {
     return AABB{
-        Vector3{ position.x - Constants::HALF_PLAYER_WIDTH, position.y, position.z - Constants::HALF_PLAYER_DEPTH },
-        Vector3{ position.x + Constants::HALF_PLAYER_WIDTH, position.y + Constants::PLAYER_HEIGHT, position.z + Constants::HALF_PLAYER_DEPTH }
+        Vector3{ m_position.x - Constants::HALF_PLAYER_WIDTH, m_position.y, m_position.z - Constants::HALF_PLAYER_DEPTH },
+        Vector3{ m_position.x + Constants::HALF_PLAYER_WIDTH, m_position.y + Constants::PLAYER_HEIGHT, m_position.z + Constants::HALF_PLAYER_DEPTH }
     };
 }
 
@@ -66,111 +81,104 @@ static float NormalizeAngle(float angle) {
     return angle;
 }
 
-void Player::UpdatePhysics(float dt, const PlayerInput& input, float cameraYaw,
+void Player::updatePhysics(float dt, const PlayerInput& input, float cameraYaw,
                            const std::vector<AABB>& colliders, ParticleSystem* particles) {
     if (input.respawnPressed) {
-        deathCount++;
-        Respawn();
+        m_deathCount++;
+        respawn();
         return;
     }
 
-    wasGrounded = isGrounded;
-    float previousFallSpeed = velocity.y;
+    m_wasGrounded = m_isGrounded;
+    float previousFallSpeed = m_velocity.y;
 
     // Camera-relative input direction
-    Vector3 forwardVec = { -sinf(cameraYaw), 0.0f, -cosf(cameraYaw) };
-    Vector3 rightVec   = {  cosf(cameraYaw), 0.0f, -sinf(cameraYaw) };
+    Vec3 forwardVec = { -sinf(cameraYaw), 0.0f, -cosf(cameraYaw) };
+    Vec3 rightVec   = {  cosf(cameraYaw), 0.0f, -sinf(cameraYaw) };
 
-    Vector3 wishDir = Vector3Add(
-        Vector3Scale(forwardVec, input.moveForward),
-        Vector3Scale(rightVec, input.moveRight)
-    );
+    Vec3 wishDir = (forwardVec * input.moveForward) + (rightVec * input.moveRight);
     wishDir.y = 0.0f;
 
-    float wishSpeed = Vector3Length(wishDir);
+    float wishSpeed = wishDir.length();
     if (wishSpeed > 0.001f) {
-        wishDir = Vector3Normalize(wishDir);
+        wishDir = wishDir.normalized();
         wishSpeed = std::min(wishSpeed, 1.0f);
-        targetYaw = atan2f(wishDir.x, wishDir.z);
+        m_targetYaw = atan2f(wishDir.x, wishDir.z);
     } else {
         wishSpeed = 0.0f;
     }
 
     // Smooth model rotation
-    float angleDiff = NormalizeAngle(targetYaw - modelYaw);
+    float angleDiff = NormalizeAngle(m_targetYaw - m_modelYaw);
     float maxTurn = Constants::MODEL_TURN_SPEED * dt;
     if (std::abs(angleDiff) <= maxTurn) {
-        modelYaw = targetYaw;
+        m_modelYaw = m_targetYaw;
     } else {
-        modelYaw += (angleDiff > 0.0f ? maxTurn : -maxTurn);
+        m_modelYaw += (angleDiff > 0.0f ? maxTurn : -maxTurn);
     }
-    modelYaw = NormalizeAngle(modelYaw);
+    m_modelYaw = NormalizeAngle(m_modelYaw);
 
     // Horizontal acceleration & friction
-    float currentAccel = isGrounded ? Constants::GROUND_ACCEL : Constants::AIR_ACCEL;
-    float currentFriction = isGrounded ? Constants::GROUND_FRICTION : Constants::AIR_DRAG;
+    float currentAccel = m_isGrounded ? Constants::GROUND_ACCEL : Constants::AIR_ACCEL;
+    float currentFriction = m_isGrounded ? Constants::GROUND_FRICTION : Constants::AIR_DRAG;
 
-    Vector3 targetHorizVel = Vector3Scale(wishDir, wishSpeed * Constants::RUN_SPEED);
-    Vector3 currentHorizVel = { velocity.x, 0.0f, velocity.z };
+    Vec3 targetHorizVel = wishDir * (wishSpeed * Constants::RUN_SPEED);
+    Vec3 currentHorizVel = { m_velocity.x, 0.0f, m_velocity.z };
 
     if (wishSpeed > 0.001f) {
-        Vector3 velDiff = Vector3Subtract(targetHorizVel, currentHorizVel);
-        float diffLen = Vector3Length(velDiff);
+        Vec3 velDiff = targetHorizVel - currentHorizVel;
+        float diffLen = velDiff.length();
         if (diffLen > 0.001f) {
             float step = currentAccel * dt;
             if (step >= diffLen) {
                 currentHorizVel = targetHorizVel;
             } else {
-                currentHorizVel = Vector3Add(currentHorizVel, Vector3Scale(Vector3Normalize(velDiff), step));
+                currentHorizVel += velDiff.normalized() * step;
             }
         }
     } else {
-        float speed = Vector3Length(currentHorizVel);
+        float speed = currentHorizVel.length();
         if (speed > 0.001f) {
             float drop = currentFriction * dt;
             float newSpeed = std::max(0.0f, speed - drop);
-            currentHorizVel = Vector3Scale(Vector3Normalize(currentHorizVel), newSpeed);
+            currentHorizVel = currentHorizVel.normalized() * newSpeed;
         } else {
-            currentHorizVel = Vector3{ 0.0f, 0.0f, 0.0f };
+            currentHorizVel = Vec3{ 0.0f, 0.0f, 0.0f };
         }
     }
 
-    velocity.x = currentHorizVel.x;
-    velocity.z = currentHorizVel.z;
+    m_velocity.x = currentHorizVel.x;
+    m_velocity.z = currentHorizVel.z;
 
     // Jump Buffering & Coyote Time
     if (input.jumpPressed) {
-        jumpBufferTimer = Constants::JUMP_BUFFER_TIME;
-    } else if (jumpBufferTimer > 0.0f) {
-        jumpBufferTimer -= dt;
+        m_jumpBufferTimer = Constants::JUMP_BUFFER_TIME;
+    } else if (m_jumpBufferTimer > 0.0f) {
+        m_jumpBufferTimer -= dt;
     }
 
-    if (isGrounded) {
-        coyoteTimer = Constants::COYOTE_TIME;
-    } else if (coyoteTimer > 0.0f) {
-        coyoteTimer -= dt;
+    if (m_isGrounded) {
+        m_coyoteTimer = Constants::COYOTE_TIME;
+    } else if (m_coyoteTimer > 0.0f) {
+        m_coyoteTimer -= dt;
     }
 
     // Jump Execution
-    if (jumpBufferTimer > 0.0f && coyoteTimer > 0.0f) {
-        velocity.y = Constants::JUMP_VELOCITY;
-        jumpBufferTimer = 0.0f;
-        coyoteTimer = 0.0f;
-        isGrounded = false;
-        AudioManager::Play(SoundId::JUMP);
+    if (m_jumpBufferTimer > 0.0f && m_coyoteTimer > 0.0f) {
+        jump();
         if (particles) {
-            particles->SpawnJumpPuff(position);
+            particles->SpawnJumpPuff(m_position.toRaylib());
         }
     }
 
     // Gravity
-    velocity.y += Constants::GRAVITY * dt;
-    if (velocity.y < Constants::TERMINAL_VELOCITY) {
-        velocity.y = Constants::TERMINAL_VELOCITY;
+    m_velocity.y += Constants::GRAVITY * dt;
+    if (m_velocity.y < Constants::TERMINAL_VELOCITY) {
+        m_velocity.y = Constants::TERMINAL_VELOCITY;
     }
 
     // Substepping
-    float maxMovement = std::max({ std::abs(velocity.x * dt), std::abs(velocity.y * dt), std::abs(velocity.z * dt) });
+    float maxMovement = std::max({ std::abs(m_velocity.x * dt), std::abs(m_velocity.y * dt), std::abs(m_velocity.z * dt) });
     int substeps = std::max(1, static_cast<int>(std::ceil(maxMovement / 0.04f)));
     float subDt = dt / static_cast<float>(substeps);
 
@@ -179,261 +187,78 @@ void Player::UpdatePhysics(float dt, const PlayerInput& input, float cameraYaw,
 
     for (int step = 0; step < substeps; ++step) {
         // 1. Resolve X
-        position.x += velocity.x * subDt;
-        AABB boxX = GetAABB();
+        m_position.x += m_velocity.x * subDt;
+        AABB boxX = getBounds();
         for (const auto& c : colliders) {
             bool overlapY = (boxX.getMin().y < c.getMax().y - SKIN) && (boxX.getMax().y > c.getMin().y + SKIN);
             bool overlapZ = (boxX.getMin().z < c.getMax().z - SKIN) && (boxX.getMax().z > c.getMin().z + SKIN);
             if (overlapY && overlapZ) {
                 if (boxX.getMin().x < c.getMax().x && boxX.getMax().x > c.getMin().x) {
-                    if (velocity.x > 0.0f) {
-                        position.x = c.getMin().x - Constants::HALF_PLAYER_WIDTH;
-                    } else if (velocity.x < 0.0f) {
-                        position.x = c.getMax().x + Constants::HALF_PLAYER_WIDTH;
+                    if (m_velocity.x > 0.0f) {
+                        m_position.x = c.getMin().x - Constants::HALF_PLAYER_WIDTH;
+                    } else if (m_velocity.x < 0.0f) {
+                        m_position.x = c.getMax().x + Constants::HALF_PLAYER_WIDTH;
                     }
-                    velocity.x = 0.0f;
-                    boxX = GetAABB();
+                    m_velocity.x = 0.0f;
+                    boxX = getBounds();
                 }
             }
         }
 
         // 2. Resolve Z
-        position.z += velocity.z * subDt;
-        AABB boxZ = GetAABB();
+        m_position.z += m_velocity.z * subDt;
+        AABB boxZ = getBounds();
         for (const auto& c : colliders) {
             bool overlapX = (boxZ.getMin().x < c.getMax().x - SKIN) && (boxZ.getMax().x > c.getMin().x + SKIN);
             bool overlapY = (boxZ.getMin().y < c.getMax().y - SKIN) && (boxZ.getMax().y > c.getMin().y + SKIN);
             if (overlapX && overlapY) {
                 if (boxZ.getMin().z < c.getMax().z && boxZ.getMax().z > c.getMin().z) {
-                    if (velocity.z > 0.0f) {
-                        position.z = c.getMin().z - Constants::HALF_PLAYER_DEPTH;
-                    } else if (velocity.z < 0.0f) {
-                        position.z = c.getMax().z + Constants::HALF_PLAYER_DEPTH;
+                    if (m_velocity.z > 0.0f) {
+                        m_position.z = c.getMin().z - Constants::HALF_PLAYER_DEPTH;
+                    } else if (m_velocity.z < 0.0f) {
+                        m_position.z = c.getMax().z + Constants::HALF_PLAYER_DEPTH;
                     }
-                    velocity.z = 0.0f;
-                    boxZ = GetAABB();
+                    m_velocity.z = 0.0f;
+                    boxZ = getBounds();
                 }
             }
         }
 
         // 3. Resolve Y
-        position.y += velocity.y * subDt;
-        AABB boxY = GetAABB();
+        m_position.y += m_velocity.y * subDt;
+        AABB boxY = getBounds();
         for (const auto& c : colliders) {
             bool overlapX = (boxY.getMin().x < c.getMax().x - SKIN) && (boxY.getMax().x > c.getMin().x + SKIN);
             bool overlapZ = (boxY.getMin().z < c.getMax().z - SKIN) && (boxY.getMax().z > c.getMin().z + SKIN);
             if (overlapX && overlapZ) {
                 if (boxY.getMin().y <= c.getMax().y && boxY.getMax().y > c.getMin().y) {
-                    if (velocity.y <= 0.0f) {
-                        position.y = c.getMax().y;
-                        velocity.y = 0.0f;
+                    if (m_velocity.y <= 0.0f) {
+                        m_position.y = c.getMax().y;
+                        m_velocity.y = 0.0f;
                         landedThisTick = true;
                     } else if (boxY.getMin().y < c.getMin().y && boxY.getMax().y >= c.getMin().y) {
-                        position.y = c.getMin().y - Constants::PLAYER_HEIGHT;
-                        velocity.y = 0.0f;
+                        m_position.y = c.getMin().y - Constants::PLAYER_HEIGHT;
+                        m_velocity.y = 0.0f;
                     }
-                    boxY = GetAABB();
+                    boxY = getBounds();
                 }
             }
         }
     }
-    isGrounded = landedThisTick;
+    m_isGrounded = landedThisTick;
 
-    // Timers
-    if (landingTimer > 0.0f) {
-        landingTimer = std::max(0.0f, landingTimer - dt);
-    }
-    if (skidTimer > 0.0f) {
-        skidTimer = std::max(0.0f, skidTimer - dt);
-    }
-
-    // Landing event (transition from airborne to grounded with downward speed)
-    if (!wasGrounded && isGrounded && previousFallSpeed < -3.5f) {
-        AudioManager::Play(SoundId::LAND);
-        landingTimer = Constants::LANDING_SQUASH_DURATION;
-        if (particles) {
-            particles->SpawnLandPuff(position, std::abs(previousFallSpeed));
-        }
-    }
-
-    // Skid dust puffs on sharp turns at speed
-    float hSpeed = Vector3Length(Vector3{ velocity.x, 0.0f, velocity.z });
-    if (isGrounded && hSpeed > 4.5f && wishSpeed > 0.1f) {
-        float velDot = (velocity.x * wishDir.x + velocity.z * wishDir.z) / hSpeed;
-        if (velDot < -0.2f && skidTimer <= 0.0f) {
-            skidTimer = 0.10f;
-            if (particles) {
-                particles->SpawnSkidPuff(position, Vector3{ velocity.x, 0.0f, velocity.z });
-            }
-        }
-    }
-
-    // Animation progress
-    if (isGrounded && hSpeed > 0.5f) {
-        walkCycle += hSpeed * dt * 2.2f;
-    } else if (isGrounded) {
-        walkCycle = 0.0f;
-    }
+    // Update procedural animator
+    float hSpeed = std::sqrt(m_velocity.x * m_velocity.x + m_velocity.z * m_velocity.z);
+    m_animator.update(dt, m_isGrounded, m_wasGrounded, hSpeed, previousFallSpeed,
+                      wishSpeed, wishDir, m_velocity, m_position, particles);
 }
 
-void Player::DrawShadow(const std::vector<AABB>& colliders) const {
-    float hitDist = 0.0f;
-    Vector3 rayOrigin = { position.x, position.y + 0.1f, position.z };
-    Vector3 rayDir = { 0.0f, -1.0f, 0.0f };
-
-    if (RaycastScene(rayOrigin, rayDir, 0.01f, Constants::SHADOW_MAX_DISTANCE, colliders, &hitDist)) {
-        float shadowY = rayOrigin.y - hitDist + Constants::SHADOW_OFFSET_Y;
-        float progress = std::clamp(hitDist / Constants::SHADOW_MAX_DISTANCE, 0.0f, 1.0f);
-
-        // Radius scales smoothly with elevation
-        float outerRadius = Constants::SHADOW_BASE_RADIUS - progress * (Constants::SHADOW_BASE_RADIUS - Constants::SHADOW_MIN_RADIUS);
-        float innerRadius = outerRadius * 0.55f;
-
-        // Quadratic falloff for natural contact shadow look
-        float fade = (1.0f - progress);
-        fade = fade * fade;
-        unsigned char outerAlpha = static_cast<unsigned char>(fade * (Constants::SHADOW_MAX_ALPHA * 0.5f));
-        unsigned char innerAlpha = static_cast<unsigned char>(fade * Constants::SHADOW_MAX_ALPHA);
-
-        // Outer soft fringe
-        DrawCube(Vector3{ position.x, shadowY, position.z }, outerRadius, Constants::SHADOW_HEIGHT, outerRadius, Color{ 15, 20, 30, outerAlpha });
-        // Inner dense core
-        DrawCube(Vector3{ position.x, shadowY + 0.002f, position.z }, innerRadius, Constants::SHADOW_HEIGHT, innerRadius, Color{ 10, 15, 25, innerAlpha });
-    }
+void Player::drawShadow(const std::vector<AABB>& colliders) const {
+    m_animator.drawShadow(m_position, colliders);
 }
 
-void Player::Draw() const {
-    rlPushMatrix();
-    rlTranslatef(position.x, position.y, position.z);
-    rlRotatef(modelYaw * RAD2DEG, 0.0f, 1.0f, 0.0f);
-
-    // Squash and stretch on landing
-    if (landingTimer > 0.0f) {
-        float squashT = landingTimer / Constants::LANDING_SQUASH_DURATION;
-        float scaleY = 1.0f - (1.0f - Constants::LANDING_SQUASH_FACTOR) * squashT;
-        float scaleXZ = 1.0f + 0.5f * (1.0f - scaleY);
-        rlScalef(scaleXZ, scaleY, scaleXZ);
-    }
-
-    float hSpeed = Vector3Length(Vector3{ velocity.x, 0.0f, velocity.z });
-    float speedRatio = std::clamp(hSpeed / Constants::RUN_SPEED, 0.0f, 1.0f);
-
-    // Slight lean into movement direction
-    if (isGrounded && speedRatio > 0.05f) {
-        rlRotatef(speedRatio * Constants::LEAN_MAX_ANGLE, 1.0f, 0.0f, 0.0f);
-    }
-
-    float bobY = 0.0f;
-    float leftLegRot = 0.0f;
-    float rightLegRot = 0.0f;
-    float leftArmRot = 0.0f;
-    float rightArmRot = 0.0f;
-    float armSplay = 0.0f;
-
-    if (isGrounded) {
-        if (hSpeed > 0.5f) {
-            // Speed-proportional walking animation
-            bobY = fabsf(sinf(walkCycle)) * (0.05f * speedRatio);
-            float legSwing = sinf(walkCycle) * (34.0f * speedRatio);
-            float armSwing = sinf(walkCycle) * (32.0f * speedRatio);
-            leftLegRot = legSwing;
-            rightLegRot = -legSwing;
-            leftArmRot = -armSwing;
-            rightArmRot = armSwing;
-        } else {
-            // Small idle breathing bob and subtle sway
-            float timeVal = static_cast<float>(GetTime());
-            bobY = sinf(timeVal * 2.5f) * 0.015f;
-            float idleSway = sinf(timeVal * 2.0f) * 2.5f;
-            leftArmRot = idleSway;
-            rightArmRot = -idleSway;
-        }
-    } else {
-        // Airborne poses
-        if (velocity.y > 0.0f) { // Jumping: arms reach up high
-            leftArmRot = 135.0f;
-            rightArmRot = 135.0f;
-            armSplay = 12.0f;
-            leftLegRot = -18.0f;
-            rightLegRot = -12.0f;
-        } else { // Falling: arms outstretched, legs dangle
-            leftArmRot = 100.0f;
-            rightArmRot = 100.0f;
-            armSplay = 18.0f;
-            leftLegRot = 8.0f;
-            rightLegRot = -8.0f;
-        }
-    }
-
-    Color shirt = GetShirtColor();
-    Color shirtWire = DarkenColor(shirt, 0.65f);
-    Color skin = Color{ 255, 225, 90, 255 }; // Classic blocky yellow tone
-    Color skinWire = DarkenColor(skin, 0.7f);
-    Color pants = Color{ 45, 60, 95, 255 };
-    Color pantsWire = DarkenColor(pants, 0.65f);
-
-    // 1. Torso
-    Vector3 torsoPos = { 0.0f, 1.20f + bobY, 0.0f };
-    Vector3 torsoSize = { 0.8f, 0.9f, 0.45f };
-    DrawCube(torsoPos, torsoSize.x, torsoSize.y, torsoSize.z, shirt);
-    DrawCubeWires(torsoPos, torsoSize.x + 0.02f, torsoSize.y + 0.02f, torsoSize.z + 0.02f, shirtWire);
-
-    // 2. Head
-    Vector3 headPos = { 0.0f, 1.95f + bobY, 0.0f };
-    Vector3 headSize = { 0.55f, 0.55f, 0.55f };
-    DrawCube(headPos, headSize.x, headSize.y, headSize.z, skin);
-    DrawCubeWires(headPos, headSize.x + 0.02f, headSize.y + 0.02f, headSize.z + 0.02f, skinWire);
-
-    // Face Details on +Z front
-    DrawCube(Vector3{ 0.12f, 2.00f + bobY, 0.28f }, 0.07f, 0.07f, 0.02f, Color{ 30, 30, 40, 255 }); // Left Eye
-    DrawCube(Vector3{ -0.12f, 2.00f + bobY, 0.28f }, 0.07f, 0.07f, 0.02f, Color{ 30, 30, 40, 255 }); // Right Eye
-    DrawCube(Vector3{ 0.0f, 1.86f + bobY, 0.28f }, 0.20f, 0.04f, 0.02f, Color{ 40, 40, 50, 255 }); // Smile
-
-    // 3. Left Leg
-    rlPushMatrix();
-    rlTranslatef(0.22f, 0.75f, 0.0f);
-    rlRotatef(leftLegRot, 1.0f, 0.0f, 0.0f);
-    DrawCube(Vector3{ 0.0f, -0.375f, 0.0f }, 0.34f, 0.75f, 0.34f, pants);
-    DrawCubeWires(Vector3{ 0.0f, -0.375f, 0.0f }, 0.35f, 0.76f, 0.35f, pantsWire);
-    rlPopMatrix();
-
-    // 4. Right Leg
-    rlPushMatrix();
-    rlTranslatef(-0.22f, 0.75f, 0.0f);
-    rlRotatef(rightLegRot, 1.0f, 0.0f, 0.0f);
-    DrawCube(Vector3{ 0.0f, -0.375f, 0.0f }, 0.34f, 0.75f, 0.34f, pants);
-    DrawCubeWires(Vector3{ 0.0f, -0.375f, 0.0f }, 0.35f, 0.76f, 0.35f, pantsWire);
-    rlPopMatrix();
-
-    // 5. Left Arm
-    rlPushMatrix();
-    rlTranslatef(0.55f, 1.55f + bobY, 0.0f);
-    rlRotatef(leftArmRot, 1.0f, 0.0f, 0.0f);
-    if (armSplay != 0.0f) {
-        rlRotatef(armSplay, 0.0f, 0.0f, 1.0f);
-    }
-    // Upper arm (sleeved)
-    DrawCube(Vector3{ 0.0f, -0.2f, 0.0f }, 0.28f, 0.4f, 0.28f, shirt);
-    DrawCubeWires(Vector3{ 0.0f, -0.2f, 0.0f }, 0.29f, 0.41f, 0.29f, shirtWire);
-    // Lower arm / hand (skin)
-    DrawCube(Vector3{ 0.0f, -0.55f, 0.0f }, 0.28f, 0.35f, 0.28f, skin);
-    DrawCubeWires(Vector3{ 0.0f, -0.55f, 0.0f }, 0.29f, 0.36f, 0.29f, skinWire);
-    rlPopMatrix();
-
-    // 6. Right Arm
-    rlPushMatrix();
-    rlTranslatef(-0.55f, 1.55f + bobY, 0.0f);
-    rlRotatef(rightArmRot, 1.0f, 0.0f, 0.0f);
-    if (armSplay != 0.0f) {
-        rlRotatef(-armSplay, 0.0f, 0.0f, 1.0f);
-    }
-    // Upper arm (sleeved)
-    DrawCube(Vector3{ 0.0f, -0.2f, 0.0f }, 0.28f, 0.4f, 0.28f, shirt);
-    DrawCubeWires(Vector3{ 0.0f, -0.2f, 0.0f }, 0.29f, 0.41f, 0.29f, shirtWire);
-    // Lower arm / hand (skin)
-    DrawCube(Vector3{ 0.0f, -0.55f, 0.0f }, 0.28f, 0.35f, 0.28f, skin);
-    DrawCubeWires(Vector3{ 0.0f, -0.55f, 0.0f }, 0.29f, 0.36f, 0.29f, skinWire);
-    rlPopMatrix();
-
-    rlPopMatrix();
+void Player::draw() const {
+    m_animator.draw(m_position, m_modelYaw, m_velocity, m_isGrounded, getShirtColor());
 }
+
+} // namespace obby

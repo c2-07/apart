@@ -19,10 +19,10 @@ CrumbleTile::CrumbleTile(const Vec3& position, const Vec3& size, float delay,
 
 void CrumbleTile::update(float dt, Player& player) {
     AABB cAABB = getBounds();
-    AABB playerAABB = player.GetAABB();
+    AABB playerAABB = player.getBounds();
 
-    bool playerStanding = player.isGrounded &&
-                          (std::abs(player.position.y - cAABB.getMax().y) < 0.05f) &&
+    bool playerStanding = player.isGrounded() &&
+                          (std::abs(player.getPosition().y - cAABB.getMax().y) < 0.05f) &&
                           (playerAABB.getMin().x < cAABB.getMax().x && playerAABB.getMax().x > cAABB.getMin().x) &&
                           (playerAABB.getMin().z < cAABB.getMax().z && playerAABB.getMax().z > cAABB.getMin().z);
 

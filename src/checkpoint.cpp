@@ -19,7 +19,7 @@ void Checkpoint::update(float dt, Player& player) {
             Vec3{ m_position.x, m_position.y + 0.6f, m_position.z },
             Vec3{ 2.4f, 1.4f, 2.4f }
         );
-        if (triggerBox.intersects(player.GetAABB())) {
+        if (triggerBox.intersects(player.getBounds())) {
             onPlayerTouch(player);
         }
     }
@@ -28,7 +28,7 @@ void Checkpoint::update(float dt, Player& player) {
 void Checkpoint::onPlayerTouch(Player& player) {
     if (!m_activated) {
         m_activated = true;
-        player.spawnPoint = m_position.toRaylib();
+        player.setSpawnPoint(m_position);
         AudioManager::Play(SoundId::CHECKPOINT);
     }
 }
