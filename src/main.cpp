@@ -11,6 +11,8 @@
 #include "validator.h"
 #include "game.h"
 #include "rlgl.h"
+#include "spikes.h"
+#include "checkpoint.h"
 
 #include <iostream>
 #include <vector>
@@ -280,6 +282,65 @@ static int RunSmokeTest() {
 
         std::remove(testPath.c_str());
         std::cout << "[SMOKE-TEST] SaveData file serialization passed cleanly!" << std::endl;
+    }
+
+    // 12. 2D Pass Step 1: Health & Hearts System Verification
+    {
+        std::cout << "[SMOKE-TEST] Testing Health & Hearts System..." << std::endl;
+        Player p;
+        p.init(Vec3{ 0.0f, 0.0f, 0.0f });
+        assert(p.getHearts() == Constants::MAX_HEARTS);
+        assert(!p.isInvincible());
+
+        // Damage reduces hearts
+        p.takeDamage(Vector2{ 1.0f, 0.0f });
+        assert(p.getHearts() == 2);
+        assert(p.isInvincible());
+        assert(p.getVelocity().y > 0.0f); // knockback upward hop
+        assert(p.getVelocity().x > 0.0f); // horizontal knockback
+
+        // Damage during invincibility does nothing
+        p.takeDamage(Vector2{ -1.0f, 0.0f });
+        assert(p.getHearts() == 2);
+
+        // Advance physics until invincibility expires
+        PlayerInput dummyInput;
+        std::vector<AABB> emptyColliders;
+        for (int i = 0; i < 200; ++i) {
+            p.updatePhysics(dt, dummyInput, 0.0f, emptyColliders);
+        }
+        assert(!p.isInvincible());
+
+        // Hit 2: Down to 1 heart
+        p.takeDamage(Vector2{ 1.0f, 0.0f });
+        assert(p.getHearts() == 1);
+        for (int i = 0; i < 200; ++i) {
+            p.updatePhysics(dt, dummyInput, 0.0f, emptyColliders);
+        }
+        assert(!p.isInvincible());
+
+        // Third hit triggers respawn and death count increments
+        int prevDeaths = p.getDeathCount();
+        p.takeDamage(Vector2{ 1.0f, 0.0f });
+        assert(p.getDeathCount() == prevDeaths + 1);
+        assert(p.getHearts() == Constants::MAX_HEARTS); // hearts restored on respawn
+
+        // Checkpoint restores hearts
+        p.takeDamage(Vector2{ 1.0f, 0.0f });
+        assert(p.getHearts() == 2);
+        Checkpoint cp(Vec3{ 0.0f, 0.0f, 0.0f });
+        cp.onPlayerTouch(p);
+        assert(p.getHearts() == Constants::MAX_HEARTS);
+
+        // Spikes still kill instantly (ignoring hearts)
+        p.takeDamage(Vector2{ 1.0f, 0.0f });
+        assert(p.getHearts() == 2);
+        Spikes spikes(Vec3{ 0.0f, 0.0f, 0.0f }, Vec3{ 2.0f, 0.5f, 2.0f });
+        prevDeaths = p.getDeathCount();
+        spikes.onPlayerTouch(p);
+        assert(p.getDeathCount() == prevDeaths + 1);
+        assert(p.getHearts() == Constants::MAX_HEARTS);
+        std::cout << "[SMOKE-TEST] Hearts & Health System verified successfully!" << std::endl;
     }
 
     std::cout << "[SMOKE-TEST] ALL MILESTONES (M1 through M8) VERIFIED AND PASSED!" << std::endl;

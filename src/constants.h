@@ -97,4 +97,12 @@ namespace Constants {
     constexpr float UI_CONTROL_HINT_FADE_END = 8.0f;
     constexpr float UI_LEVEL_TITLE_DURATION = 2.0f;
     constexpr float UI_CHECKPOINT_LERP_SPEED = 8.0f;
+
+    // Health & Gameplay System (2D Pass Step 1)
+    constexpr int MAX_HEARTS = 3;
+    constexpr float INVINCIBILITY_TIME = 1.5f;
+    constexpr float KNOCKBACK_SPEED = 6.0f;
+    constexpr float KNOCKBACK_HOP = 5.0f;
+    constexpr float HEART_SHAKE_DURATION = 0.35f;
+    constexpr float BLINK_INTERVAL = 0.10f;
 }

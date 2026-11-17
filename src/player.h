@@ -41,6 +41,11 @@ private:
     Vec3 m_spawnPoint;
     int m_colorIndex; // 0: Classic Blue, 1: Crimson Red, 2: Emerald Green, 3: Royal Purple, 4: Sunset Orange, 5: Sunshine Yellow
 
+    // Health & Invincibility
+    int m_maxHearts;
+    int m_hearts;
+    float m_invincibleTimer;
+
     PlayerAnimator m_animator;
 
 public:
@@ -50,6 +55,15 @@ public:
     void respawn();
     void jump();
     void applyImpulse(const Vec3& impulse);
+
+    // Health & Damage interface
+    void takeDamage(const Vector2& knockbackDirection);
+    void heal(int amount);
+    bool isInvincible() const { return m_invincibleTimer > 0.0f; }
+    int getHearts() const { return m_hearts; }
+    int getMaxHearts() const { return m_maxHearts; }
+    void resetHearts();
+    float getInvincibleTimer() const { return m_invincibleTimer; }
 
     void updatePhysics(float dt, const PlayerInput& input, float cameraYaw,
                        const std::vector<AABB>& colliders, ParticleSystem* particles = nullptr);

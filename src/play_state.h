@@ -7,6 +7,10 @@ namespace obby {
  * @brief Active gameplay state running 120Hz physics substepping, HUD overlay, and completion triggers.
  */
 class PlayState : public GameState {
+private:
+    mutable float m_heartShakeTimer;
+    mutable int m_previousHearts;
+
 public:
     explicit PlayState(Game& game);
     virtual ~PlayState() override = default;

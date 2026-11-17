@@ -29,6 +29,7 @@ void Checkpoint::onPlayerTouch(Player& player) {
     if (!m_activated) {
         m_activated = true;
         player.setSpawnPoint(m_position);
+        player.resetHearts();
         AudioManager::Play(SoundId::CHECKPOINT);
     }
 }

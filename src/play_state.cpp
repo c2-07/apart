@@ -11,7 +11,9 @@
 namespace obby {
 
 PlayState::PlayState(Game& game)
-    : GameState(game) {}
+    : GameState(game),
+      m_heartShakeTimer(0.0f),
+      m_previousHearts(Constants::MAX_HEARTS) {}
 
 void PlayState::handleInput() {
     if (IsKeyPressed(KEY_ESCAPE)) {
@@ -84,6 +86,14 @@ void PlayState::update(float frameDelta) {
     m_game.particles.Update(frameDelta);
 
     m_game.levelPlayTime += frameDelta;
+
+    if (m_game.player.getHearts() < m_previousHearts) {
+        m_heartShakeTimer = Constants::HEART_SHAKE_DURATION;
+    }
+    m_previousHearts = m_game.player.getHearts();
+    if (m_heartShakeTimer > 0.0f) {
+        m_heartShakeTimer = std::max(0.0f, m_heartShakeTimer - frameDelta);
+    }
 
     // Smooth number animation for checkpoint counter
     float targetCp = static_cast<float>(m_game.level.GetActivatedCheckpointCount());
@@ -189,6 +199,7 @@ void PlayState::draw() const {
 
     UI::DrawHUD(m_game.level.name, m_game.level.elapsedTime, m_game.level.parTime,
                 static_cast<int>(std::round(m_game.displayedCheckpoints)), m_game.level.GetTotalCheckpointCount(), m_game.level.deaths,
+                m_game.player.getHearts(), m_game.player.getMaxHearts(), m_heartShakeTimer,
                 hintAlpha, titleAlpha);
 
     // Context hint banner

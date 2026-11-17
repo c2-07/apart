@@ -102,9 +102,10 @@ void DrawVolumeControl(int posX, int posY, float width) {
 
 void DrawHUD(const std::string& levelName, float timer, float parTime,
              int checkpoints, int totalCheckpoints, int deaths,
+             int hearts, int maxHearts, float heartShake,
              float hintAlpha, float titleAlpha) {
     // 1. Polished HUD Panel with Drop Shadow & Consistent Padding
-    Rectangle hudPanel = { 20, 20, 340, 115 };
+    Rectangle hudPanel = { 20, 20, 360, 118 };
     // Subtle drop shadow
     DrawRectangleRounded(Rectangle{ hudPanel.x + 3.0f, hudPanel.y + 3.0f, hudPanel.width, hudPanel.height }, 0.2f, 4, Color{ 0, 0, 0, 75 });
     // Main panel background
@@ -117,6 +118,34 @@ void DrawHUD(const std::string& levelName, float timer, float parTime,
 
     // Level Title
     DrawText(levelName.c_str(), (int)padX, (int)curY, 20, Color{ 250, 252, 255, 255 });
+
+    // Hearts at the top right of HUD panel with damage shake
+    float shakeOffset = (heartShake > 0.0f) ? sinf(heartShake * 60.0f) * 4.0f : 0.0f;
+    float heartStartX = hudPanel.x + hudPanel.width - 88.0f + shakeOffset;
+    float heartY = curY + 6.0f;
+    float hr = 4.5f;
+
+    for (int i = 0; i < maxHearts; ++i) {
+        float hx = heartStartX + i * 22.0f;
+        if (i < hearts) {
+            // Full heart: rich red
+            Color redHeart = Color{ 235, 45, 65, 255 };
+            DrawCircle((int)(hx - hr * 0.7f), (int)heartY, hr, redHeart);
+            DrawCircle((int)(hx + hr * 0.7f), (int)heartY, hr, redHeart);
+            Vector2 p1 = { hx - hr * 1.6f, heartY + 1.0f };
+            Vector2 p2 = { hx + hr * 1.6f, heartY + 1.0f };
+            Vector2 p3 = { hx, heartY + hr * 2.3f };
+            DrawTriangle(p1, p3, p2, redHeart);
+        } else {
+            // Empty heart: dark gray outline
+            Color emptyCol = Color{ 70, 75, 90, 255 };
+            DrawCircleLines((int)(hx - hr * 0.7f), (int)heartY, hr, emptyCol);
+            DrawCircleLines((int)(hx + hr * 0.7f), (int)heartY, hr, emptyCol);
+            DrawLineEx(Vector2{ hx - hr * 1.6f, heartY + 1.0f }, Vector2{ hx, heartY + hr * 2.3f }, 1.5f, emptyCol);
+            DrawLineEx(Vector2{ hx + hr * 1.6f, heartY + 1.0f }, Vector2{ hx, heartY + hr * 2.3f }, 1.5f, emptyCol);
+        }
+    }
+
     curY += 26.0f;
 
     // Color-Graded Timer: green under par, yellow near par (within 125%), red over par

@@ -20,6 +20,9 @@ Player::Player()
       m_isAlive(true),
       m_spawnPoint(Vec3{ 0.0f, 0.0f, 0.0f }),
       m_colorIndex(0),
+      m_maxHearts(Constants::MAX_HEARTS),
+      m_hearts(Constants::MAX_HEARTS),
+      m_invincibleTimer(0.0f),
       m_animator() {}
 
 void Player::init(const Vec3& spawn) {
@@ -28,7 +31,45 @@ void Player::init(const Vec3& spawn) {
     m_colorIndex = 0;
     m_wasGrounded = false;
     m_animator.reset();
+    resetHearts();
     respawn();
+}
+
+void Player::resetHearts() {
+    m_hearts = m_maxHearts;
+    m_invincibleTimer = 0.0f;
+}
+
+void Player::heal(int amount) {
+    if (amount > 0) {
+        m_hearts = std::min(m_maxHearts, m_hearts + amount);
+    }
+}
+
+void Player::takeDamage(const Vector2& knockbackDirection) {
+    if (isInvincible() || !m_isAlive) return;
+
+    m_hearts--;
+    m_invincibleTimer = Constants::INVINCIBILITY_TIME;
+
+    // Horizontal knockback away from source (~6 m/s) and small upward hop (~5 m/s)
+    float kx = knockbackDirection.x;
+    if (std::abs(kx) < 0.001f) {
+        kx = (m_velocity.x < 0.0f) ? 1.0f : -1.0f;
+    } else {
+        kx = (kx > 0.0f) ? 1.0f : -1.0f;
+    }
+    m_velocity.x = kx * Constants::KNOCKBACK_SPEED;
+    m_velocity.y = Constants::KNOCKBACK_HOP;
+    m_isGrounded = false;
+
+    if (m_hearts <= 0) {
+        m_deathCount++;
+        respawn();
+        AudioManager::Play(SoundId::DEATH);
+    } else {
+        AudioManager::Play(SoundId::LAND);
+    }
 }
 
 void Player::respawn() {
@@ -41,6 +82,7 @@ void Player::respawn() {
     m_coyoteTimer = 0.0f;
     m_jumpBufferTimer = 0.0f;
     m_isAlive = true;
+    resetHearts();
     m_animator.reset();
 }
 
@@ -83,6 +125,10 @@ static float NormalizeAngle(float angle) {
 
 void Player::updatePhysics(float dt, const PlayerInput& input, float cameraYaw,
                            const std::vector<AABB>& colliders, ParticleSystem* particles) {
+    if (m_invincibleTimer > 0.0f) {
+        m_invincibleTimer = std::max(0.0f, m_invincibleTimer - dt);
+    }
+
     if (input.respawnPressed) {
         m_deathCount++;
         respawn();
@@ -258,6 +304,13 @@ void Player::drawShadow(const std::vector<AABB>& colliders) const {
 }
 
 void Player::draw() const {
+    // Blink while invincible by skipping drawing every ~0.1s
+    if (isInvincible()) {
+        int blinkPhase = static_cast<int>(m_invincibleTimer / Constants::BLINK_INTERVAL);
+        if (blinkPhase % 2 == 1) {
+            return;
+        }
+    }
     m_animator.draw(m_position, m_modelYaw, m_velocity, m_isGrounded, getShirtColor());
 }
 
