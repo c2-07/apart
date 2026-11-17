@@ -258,12 +258,12 @@ void Player::DrawShadow(const std::vector<AABB>& colliders) const {
     Vector3 rayDir = { 0.0f, -1.0f, 0.0f };
 
     if (RaycastScene(rayOrigin, rayDir, 0.01f, 16.0f, colliders, &hitDist)) {
-        float shadowY = rayOrigin.y - hitDist + 0.015f;
+        float shadowY = rayOrigin.y - hitDist + Constants::SHADOW_OFFSET_Y;
         float progress = std::clamp(hitDist / 16.0f, 0.0f, 1.0f);
         float radius = 0.85f * (1.0f - progress * 0.45f);
         unsigned char alpha = static_cast<unsigned char>((1.0f - progress) * 150.0f);
 
-        DrawCube(Vector3{ position.x, shadowY, position.z }, radius, 0.01f, radius, Color{ 15, 20, 30, alpha });
+        DrawCube(Vector3{ position.x, shadowY, position.z }, radius, Constants::SHADOW_HEIGHT, radius, Color{ 15, 20, 30, alpha });
     }
 }
 

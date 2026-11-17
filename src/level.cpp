@@ -694,7 +694,7 @@ void Level::Draw() const {
         Color wireColor = DarkenColor(faceColor, 0.6f);
         DrawCube(m.currentPos, m.size.x, m.size.y, m.size.z, faceColor);
         DrawCubeWires(m.currentPos, m.size.x + 0.03f, m.size.y + 0.03f, m.size.z + 0.03f, wireColor);
-        DrawCube(Vector3{ m.currentPos.x, m.currentPos.y + m.size.y * 0.51f, m.currentPos.z },
+        DrawCube(Vector3{ m.currentPos.x, m.currentPos.y + m.size.y * 0.5f + Constants::SURFACE_DECAL_OFFSET_Y, m.currentPos.z },
                  m.size.x * 0.4f, 0.05f, m.size.z * 0.4f, pal.accent);
     }
 
@@ -745,7 +745,7 @@ void Level::Draw() const {
     for (const auto& bp : bouncePads) {
         DrawCube(bp.center, bp.size.x, bp.size.y, bp.size.z, Color{ 250, 220, 50, 255 });
         DrawCubeWires(bp.center, bp.size.x + 0.03f, bp.size.y + 0.03f, bp.size.z + 0.03f, Color{ 200, 160, 20, 255 });
-        Vector3 springPos = { bp.center.x, bp.center.y + bp.size.y * 0.52f, bp.center.z };
+        Vector3 springPos = { bp.center.x, bp.center.y + bp.size.y * 0.5f + Constants::SURFACE_DECAL_OFFSET_Y, bp.center.z };
         DrawCube(springPos, bp.size.x * 0.5f, 0.06f, bp.size.z * 0.5f, Color{ 255, 60, 160, 255 });
     }
 
@@ -771,7 +771,7 @@ void Level::Draw() const {
                 float a = (2.0f * PI * i) / segments;
                 Vector3 dotPos = {
                     btn.position.x + cosf(a) * ringRadius,
-                    btn.position.y + 0.04f,
+                    btn.position.y + Constants::SURFACE_DECAL_OFFSET_Y + 0.02f,
                     btn.position.z + sinf(a) * ringRadius
                 };
                 DrawCube(dotPos, 0.2f, 0.06f, 0.2f, Color{ 80, 255, 150, 240 });
@@ -799,10 +799,10 @@ void Level::Draw() const {
 
     // 10. Checkpoints
     for (const auto& cp : checkpoints) {
-        Vector3 padCenter = { cp.position.x, cp.position.y - 0.25f, cp.position.z };
+        Vector3 padCenter = { cp.position.x, cp.position.y + Constants::CHECKPOINT_PAD_OFFSET_Y, cp.position.z };
         Color padColor = cp.activated ? Color{ 80, 220, 100, 255 } : Color{ 180, 180, 190, 255 };
-        DrawCube(padCenter, 3.0f, 0.5f, 3.0f, padColor);
-        DrawCubeWires(padCenter, 3.02f, 0.52f, 3.02f, DarkenColor(padColor, 0.65f));
+        DrawCube(padCenter, 3.0f, Constants::CHECKPOINT_PAD_HEIGHT, 3.0f, padColor);
+        DrawCubeWires(padCenter, 3.02f, Constants::CHECKPOINT_PAD_HEIGHT + 0.01f, 3.02f, DarkenColor(padColor, 0.65f));
 
         Vector3 poleCenter = { cp.position.x - 1.0f, cp.position.y + 1.25f, cp.position.z - 1.0f };
         DrawCube(poleCenter, 0.15f, 2.5f, 0.15f, Color{ 70, 70, 80, 255 });
@@ -817,8 +817,9 @@ void Level::Draw() const {
     if (hasFinish) {
         Vector3 fCenter = finish.triggerAABB.GetCenter();
         Vector3 fSize = finish.triggerAABB.GetSize();
-        DrawCube(fCenter, fSize.x, fSize.y, fSize.z, Color{ 255, 215, 0, 160 });
-        DrawCubeWires(fCenter, fSize.x + 0.04f, fSize.y + 0.04f, fSize.z + 0.04f, Color{ 220, 160, 0, 255 });
+        Vector3 renderCenter = { fCenter.x, fCenter.y + Constants::SURFACE_DECAL_OFFSET_Y, fCenter.z };
+        DrawCube(renderCenter, fSize.x, fSize.y, fSize.z, Color{ 255, 215, 0, 160 });
+        DrawCubeWires(renderCenter, fSize.x + 0.04f, fSize.y + 0.04f, fSize.z + 0.04f, Color{ 220, 160, 0, 255 });
 
         float t = static_cast<float>(GetTime());
         Vector3 trophyPos = { fCenter.x, fCenter.y + 1.5f + sinf(t * 3.0f) * 0.2f, fCenter.z };

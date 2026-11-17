@@ -121,6 +121,49 @@ cmake --build build
     - Windowed Cocoa OpenGL display mode runs at a smooth 60 FPS on macOS with interactive raygui-styled UI controls.
     - Zero compiler warnings under `-Wall -Wextra -pedantic -Werror`.
 
+## Visual Polish Pass: Architecture & Initial Assessment
+
+### How Drawing Currently Works
+1. **Window, Projection & Depth Buffer:**
+   - Window initialized via `InitWindow(1280, 720, ...)`. Default flags lack MSAA anti-aliasing hints.
+   - Depth clip planes currently default to standard raylib values (~0.01 to 1000.0m), causing significant z-buffer compression and precision loss on distant platforms and coplanar surfaces.
+   - 3D scene uses `BeginMode3D(camera.GetRaylibCamera())` with a fixed 65° vertical FOV perspective projection.
+
+2. **Sky & Background:**
+   - `Level::DrawSkybox()` currently clears the frame buffer to a single solid flat color (`pal.skyTop`) with `ClearBackground()`.
+   - 8 procedural cube clouds drift along X using `DrawCube` and `DrawCubeWires` with semi-transparent tint.
+   - No vertical sky gradient, horizon color blending, or atmospheric depth fog exists.
+
+3. **3D Entity Shading & Lighting:**
+   - All geometries (boxes, movers, hazards, checkpoints, player limbs) are drawn using raylib's immediate-mode `DrawCube(center, size, color)` and `DrawCubeWires(center, size, wireColor)`.
+   - No shaders or lighting uniforms are currently used; all faces receive 100% flat unlit color, making 3D shapes lack depth perception when camera angles align with cube normals.
+   - Outlines are drawn via dark wire cubes overlaid with a crude +0.02m expansion.
+
+4. **Coplanar Geometries & Z-Fighting:**
+   - Checkpoint base pads, finish zones, and button rings sit exactly coplanar with underlying platforms (e.g. at $Y = 0.0$), causing visible z-fighting and polygon flicker.
+   - Player fake drop shadow is projected as a 0.01m tall box at $+0.015$m offset, which shimmers when the camera rotates at grazing angles.
+
+5. **Character & Particle Rendering:**
+   - Avatar assembled from 6 primitive cubes (head, torso, 2 arms, 2 legs) plus eye/smile cubes.
+   - Walk animation drives leg/arm pitch via a single sinusoidal walk cycle without velocity-proportional limb scaling, landing squash-and-stretch, or directional lean.
+   - Particles are simple unlit falling cubes.
+
+6. **2D Interface (HUD & Menus):**
+   - Rendered in screen space after `EndMode3D()` using rounded rectangles and standard bitmap text rendering.
+   - HUD displays timer, checkpoint counter, and death counter with fixed padding, without smooth number interpolation, dynamic countdown coloring, or title fade-ins.
+
+### Step 1: Flicker (Z-Fighting) Elimination & Depth Precision
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - Configured 4x MSAA (`FLAG_MSAA_4X_HINT`) and VSync (`FLAG_VSYNC_HINT`) prior to `InitWindow`.
+  - Called `rlSetClipPlanes(0.1, 300.0)` immediately after window initialization to narrow the depth range and dramatically increase 24-bit z-buffer precision across distant platforms.
+  - Checkpoint pads elevated to thin 0.06m boxes resting on platform top surfaces (`CHECKPOINT_PAD_OFFSET_Y = 0.03m`), eliminating coplanar z-fighting with underlying blocks.
+  - Finish zones, mover accent plates, bounce pad spring plates, and button countdown ring dots elevated with `SURFACE_DECAL_OFFSET_Y = 0.02m`.
+  - Player drop shadow raised with `SHADOW_OFFSET_Y = 0.02m` and given 0.02m depth thickness to prevent camera grazing angle shimmer.
+  - Tunables centralized in `Constants::CLIP_NEAR`, `Constants::CLIP_FAR`, `Constants::CHECKPOINT_PAD_HEIGHT`, etc.
+
+
+
 
 
 

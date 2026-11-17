@@ -43,4 +43,13 @@ namespace Constants {
     constexpr float CAM_SMOOTH_SPEED = 14.0f;       // smoothing factor
     constexpr float CAM_TARGET_HEIGHT = 1.2f;       // focus height above player base
     constexpr float CAM_OBSTACLE_MARGIN = 0.25f;    // pull-in clearance
+
+    // Rendering & Depth (Visual Pass Step 1)
+    constexpr float CLIP_NEAR = 0.1f;               // near clipping plane for depth precision
+    constexpr float CLIP_FAR = 300.0f;              // far clipping plane to prevent z-shimmer
+    constexpr float CHECKPOINT_PAD_HEIGHT = 0.06f;  // raised thin box height
+    constexpr float CHECKPOINT_PAD_OFFSET_Y = 0.03f;// resting on top of platform
+    constexpr float SURFACE_DECAL_OFFSET_Y = 0.02f; // prevent coplanar z-fighting
+    constexpr float SHADOW_OFFSET_Y = 0.02f;        // shadow elevation above surface
+    constexpr float SHADOW_HEIGHT = 0.02f;          // shadow thickness
 }

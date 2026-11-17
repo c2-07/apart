@@ -10,6 +10,7 @@
 #include "particle.h"
 #include "validator.h"
 #include "game.h"
+#include "rlgl.h"
 
 #include <iostream>
 #include <vector>
@@ -300,12 +301,13 @@ int main(int argc, char* argv[]) {
     const int screenWidth = 1280;
     const int screenHeight = 720;
 
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
     InitWindow(screenWidth, screenHeight, "Blocky Obby Adventure");
     if (!IsWindowReady()) {
         std::cerr << "Window could not be initialized. Running smoke test instead." << std::endl;
         return RunSmokeTest();
     }
+    rlSetClipPlanes(Constants::CLIP_NEAR, Constants::CLIP_FAR);
     SetTargetFPS(60);
 
     AudioManager::Init();
