@@ -23,6 +23,18 @@ add_executable(obby
     src/main.cpp
     src/vec3.cpp
     src/aabb.cpp
+    src/render_utils.cpp
+    src/entity.cpp
+    src/platform.cpp
+    src/moving_platform.cpp
+    src/crumble_tile.cpp
+    src/spikes.cpp
+    src/spinner.cpp
+    src/bounce_pad.cpp
+    src/checkpoint.cpp
+    src/finish_zone.cpp
+    src/button.cpp
+    src/door.cpp
     src/game.cpp
     src/collision.cpp
     src/camera.cpp
