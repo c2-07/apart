@@ -4,6 +4,8 @@ A complete, single-player 3D platformer/obby built in C++17 from scratch using *
 
 Inspired by cooperative Roblox obbies (such as *Together [Party Game]*), **Blocky Obby Adventure** replaces multi-player dependency with clever single-player solvable puzzle mechanics—such as sprint dash routes and **Ghost-Clone Recording**—where you record your own trajectory to step on pressure plates and hold doors open for yourself.
 
+https://github.com/c2-07/apart/raw/main/gameplay.mp4
+
 ---
 
 ## Key Features

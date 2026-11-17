@@ -129,7 +129,7 @@ void DrawHUD(const std::string& levelName, float timer, float parTime,
         timeColor = Color{ 245, 85, 75, 255 };  // Over par: Warning Red
     }
     char timeBuf[64];
-    snprintf(timeBuf, sizeof(timeBuf), "Time: %.2fs (Par: %.1fs)", timer, parTime);
+    snprintf(timeBuf, sizeof(timeBuf), "Time: %ds (Par: %ds)", static_cast<int>(timer), static_cast<int>(parTime));
     DrawText(timeBuf, (int)padX, (int)curY, 16, timeColor);
     curY += 22.0f;
 
@@ -206,7 +206,7 @@ ResultsAction DrawResultsScreen(int screenWidth, int screenHeight, float finalTi
     DrawText(starStr, (int)(card.x + (cardW - starW) * 0.5f), (int)(card.y + 70), 22, starCol);
 
     char timeStat[64];
-    snprintf(timeStat, sizeof(timeStat), "Final Time: %.2f seconds (Par: %.1fs)", finalTime, parTime);
+    snprintf(timeStat, sizeof(timeStat), "Final Time: %d seconds (Par: %ds)", static_cast<int>(finalTime), static_cast<int>(parTime));
     DrawText(timeStat, (int)(card.x + 40), (int)(card.y + 120), 18, Color{ 230, 240, 255, 255 });
 
     char deathStat[48];

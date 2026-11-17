@@ -60,7 +60,7 @@ void LevelSelectState::draw() const {
                 // Stars and best time below button label
                 char statBuf[48];
                 if (m_game.save.levels[lvlIdx].bestTime > 0.0f) {
-                    snprintf(statBuf, sizeof(statBuf), "[%s] %.1fs", starTxt, m_game.save.levels[lvlIdx].bestTime);
+                    snprintf(statBuf, sizeof(statBuf), "[%s] %ds", starTxt, static_cast<int>(m_game.save.levels[lvlIdx].bestTime));
                 } else {
                     snprintf(statBuf, sizeof(statBuf), "[%s] No Record", starTxt);
                 }
