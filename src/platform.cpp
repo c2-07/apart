@@ -35,19 +35,26 @@ void Platform::draw() const {
     };
     Color bodyWire = DarkenColor(variedColor, Constants::OUTLINE_DARKEN_FACTOR);
 
-    DrawCube(center, size.x, size.y, size.z, variedColor);
-    DrawCubeWires(center, size.x + Constants::OUTLINE_EXPANSION, size.y + Constants::OUTLINE_EXPANSION, size.z + Constants::OUTLINE_EXPANSION, bodyWire);
-
     // Slim top cap with slight overhang in lighter shade for readable jumping ledges
     if (size.y > Constants::PLATFORM_CAP_HEIGHT * 1.5f) {
         float capH = Constants::PLATFORM_CAP_HEIGHT;
         float capOverhang = Constants::PLATFORM_CAP_OVERHANG;
+
+        // Platform body sits cleanly below the cap to prevent coplanar z-fighting
+        float bodyH = size.y - capH;
+        Vector3 bodyCenter = { center.x, center.y - (capH * 0.5f), center.z };
+        DrawCube(bodyCenter, size.x, bodyH, size.z, variedColor);
+        DrawCubeWires(bodyCenter, size.x + Constants::OUTLINE_EXPANSION, bodyH + Constants::OUTLINE_EXPANSION, size.z + Constants::OUTLINE_EXPANSION, bodyWire);
+
         Vector3 capCenter = { center.x, center.y + (size.y * 0.5f) - (capH * 0.5f), center.z };
         Vector3 capSize = { size.x + capOverhang * 2.0f, capH, size.z + capOverhang * 2.0f };
         Color capColor = LightenColor(variedColor, 1.25f);
         Color capWire = DarkenColor(capColor, Constants::OUTLINE_DARKEN_FACTOR);
         DrawCube(capCenter, capSize.x, capSize.y, capSize.z, capColor);
         DrawCubeWires(capCenter, capSize.x + Constants::OUTLINE_EXPANSION, capSize.y + Constants::OUTLINE_EXPANSION, capSize.z + Constants::OUTLINE_EXPANSION, capWire);
+    } else {
+        DrawCube(center, size.x, size.y, size.z, variedColor);
+        DrawCubeWires(center, size.x + Constants::OUTLINE_EXPANSION, size.y + Constants::OUTLINE_EXPANSION, size.z + Constants::OUTLINE_EXPANSION, bodyWire);
     }
 }
 

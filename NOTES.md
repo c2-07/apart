@@ -340,6 +340,19 @@ cmake --build build
   - Generated complete Mermaid UML class diagrams representing the `Entity` hierarchy, the `GameState` State Pattern, and the Core Engine Component Ownership.
   - Provided a college viva voce defense Q&A covering design tradeoffs, virtual method table mechanics, object slicing prevention, and memory management.
 
+#### Bugfix: Visual Glitching & Disappearing Geometry Resolution
+- **Status:** COMPLETED
+- **Root Cause Analysis:**
+  1. **Missing Depth Buffer Clearing:** In the main render loop and `Level::DrawSkybox()`, `ClearBackground()` was never called during gameplay. `DrawRectangleGradientV()` only drew a 2D quad into the color buffer without clearing the OpenGL depth buffer (`glClear(GL_DEPTH_BUFFER_BIT)`). The depth buffer retained stale depth values from previous frames and camera orientations, causing newly rasterized geometry to fail the depth test. As the camera orbited, minimum depth values accumulated across the buffer, producing diagonal slicing, horizontal tearing, sky bleeding over foreground models, and eventual complete disappearance of the 3D scene.
+  2. **Coplanar Z-Fighting on Platform Caps:** In `Platform::draw()` and `MovingPlatform::draw()`, the body box was drawn at full platform height while the decorative cap was drawn with its top face coplanar with the body top face (`center.y + size.y * 0.5f`). This caused classic Venetian-blind horizontal z-fighting stripes on the tops of platforms.
+  3. **Transparent Elements Writing to Depth Buffer:** Ground haze, clouds, contact shadows, and particle puffs were rendered with depth writing enabled before or alongside opaque objects. Transparent geometry wrote into the depth buffer, occluding opaque objects behind them.
+  4. **Vertex Shader Model Matrix Transform:** `assets/shaders/lighting.vs` lacked `matModel` and `matNormal` uniforms, passing raw `vertexPosition` directly into `fragPosition`. For objects drawn with `rlPushMatrix()` / `rlTranslatef()` (e.g. player character), `vertexPosition` was in local coordinates rather than world coordinates.
+- **Fix Implemented:**
+  1. Added `ClearBackground(BLACK)` in `main.cpp` and `Level::DrawSkybox()` to guarantee full depth and color buffer clearing every frame.
+  2. Adjusted `Platform` and `MovingPlatform` body heights to `size.y - capH` positioned directly beneath the cap, eliminating coplanar top face overlap and z-fighting.
+  3. Reordered `Level::Draw()` to render opaque entities first, followed by transparent elements (clouds, haze, shadows, particles) with `rlDisableDepthMask()` and `rlEnableDepthMask()`.
+  4. Updated `assets/shaders/lighting.vs` with `uniform mat4 matModel` and `uniform mat4 matNormal` to accurately compute world-space `fragPosition` and transformed `fragNormal`.
+
 
 
 

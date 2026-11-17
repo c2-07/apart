@@ -7,6 +7,7 @@
 #include "pause_state.h"
 #include "results_state.h"
 #include "render_utils.h"
+#include "rlgl.h"
 
 #include <fstream>
 #include <sstream>
@@ -257,8 +258,12 @@ void Game::DrawPlaying() const {
     level.Draw();
     player.draw();
     if (shaderLoaded) EndShaderMode();
+
+    rlDisableDepthMask();
     player.drawShadow(colliders);
     particles.Draw();
+    rlEnableDepthMask();
+
     EndMode3D();
 }
 

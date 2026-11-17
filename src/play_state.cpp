@@ -3,6 +3,7 @@
 #include "ui.h"
 #include "constants.h"
 #include "raylib.h"
+#include "rlgl.h"
 #include <cmath>
 #include <algorithm>
 #include <cstdio>
@@ -153,8 +154,13 @@ void PlayState::draw() const {
     m_game.level.Draw();
     m_game.player.draw();
     if (m_game.shaderLoaded) EndShaderMode();
+
+    // Transparent pass with depth writing disabled
+    rlDisableDepthMask();
     m_game.player.drawShadow(colliders);
     m_game.particles.Draw();
+    rlEnableDepthMask();
+
     EndMode3D();
 
     float maxFade = std::max(m_game.respawnFadeAlpha, m_game.levelLoadFadeAlpha);

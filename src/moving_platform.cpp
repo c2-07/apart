@@ -50,11 +50,14 @@ void MovingPlatform::draw() const {
     Vector3 center = m_position.toRaylib();
     Vector3 size = m_size.toRaylib();
 
-    DrawCube(center, size.x, size.y, size.z, faceColor);
-    DrawCubeWires(center, size.x + Constants::OUTLINE_EXPANSION, size.y + Constants::OUTLINE_EXPANSION, size.z + Constants::OUTLINE_EXPANSION, wireColor);
+    float capH = 0.08f;
+    float bodyH = (size.y > capH * 1.5f) ? (size.y - capH) : size.y;
+    Vector3 bodyCenter = (size.y > capH * 1.5f) ? Vector3{ center.x, center.y - (capH * 0.5f), center.z } : center;
+
+    DrawCube(bodyCenter, size.x, bodyH, size.z, faceColor);
+    DrawCubeWires(bodyCenter, size.x + Constants::OUTLINE_EXPANSION, bodyH + Constants::OUTLINE_EXPANSION, size.z + Constants::OUTLINE_EXPANSION, wireColor);
 
     // Top cap with directional chevron stripes
-    float capH = 0.08f;
     Vector3 capPos = { center.x, center.y + size.y * 0.5f - capH * 0.5f, center.z };
     Color capCol = LightenColor(faceColor, 1.2f);
     DrawCube(capPos, size.x + 0.04f, capH, size.z + 0.04f, capCol);

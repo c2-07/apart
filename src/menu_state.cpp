@@ -2,6 +2,7 @@
 #include "game.h"
 #include "ui.h"
 #include "raylib.h"
+#include "rlgl.h"
 
 namespace obby {
 
@@ -26,7 +27,11 @@ void MenuState::draw() const {
     m_game.level.Draw();
     m_game.player.draw();
     if (m_game.shaderLoaded) EndShaderMode();
+
+    rlDisableDepthMask();
     m_game.player.drawShadow(m_game.level.GetSolidColliders());
+    rlEnableDepthMask();
+
     EndMode3D();
 
     int sw = GetScreenWidth();

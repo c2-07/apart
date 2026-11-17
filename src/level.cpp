@@ -241,6 +241,7 @@ void Level::Update(float dt, Player& player, ParticleSystem* particles) {
 }
 
 void Level::DrawSkybox() const {
+    ClearBackground(BLACK);
     WorldPalette pal = GetWorldPalette(m_worldId);
     int sw = GetScreenWidth();
     int sh = GetScreenHeight();
@@ -249,6 +250,14 @@ void Level::DrawSkybox() const {
 
 void Level::Draw() const {
     WorldPalette pal = GetWorldPalette(m_worldId);
+
+    // 1. Opaque entities pass with normal depth testing and depth write
+    for (const auto& entity : m_entities) {
+        entity->draw();
+    }
+
+    // 2. Transparent elements with depth write disabled to prevent occluding geometry
+    rlDisableDepthMask();
 
     // Atmospheric ground-far haze below course void
     float hazeY = m_killY - 2.0f;
@@ -266,13 +275,10 @@ void Level::Draw() const {
         DrawCubeWires(cPos, 22.04f, 4.54f, 12.04f, Color{ pal.fogColor.r, pal.fogColor.g, pal.fogColor.b, 160 });
     }
 
-    // Polymorphic draw loop across all entities (no type switches!)
-    for (const auto& entity : m_entities) {
-        entity->draw();
-    }
-
     // Draw ghost replay if active
     ghost.Draw();
+
+    rlEnableDepthMask();
 }
 
 std::vector<AABB> Level::GetSolidColliders() const {

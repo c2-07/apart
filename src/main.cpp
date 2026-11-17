@@ -324,6 +324,7 @@ int main(int argc, char* argv[]) {
         game.Update(frameDelta);
 
         BeginDrawing();
+        ClearBackground(BLACK);
         game.Draw();
         EndDrawing();
     }
