@@ -105,6 +105,23 @@ cmake --build build
   - Built-in Level Validator (`--validate-levels` CLI): breadth-first search path reachability solver verifying jump distance bounds ($D_{max} \le 6.13$m flat, plus launch pad and mover displacements) with zero unreachable gaps across all 20 levels.
   - Debug cheats: F1 toggles 6DOF noclip flight (WASD + Space/Shift), and 'T' teleports the player directly to the next checkpoint or finish for rapid level playtesting.
 
+### Milestone 8: Menus, Saving, and Release
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - **Full Game State Machine:** `MAIN_MENU`, `LEVEL_SELECT`, `CHARACTER_SELECT`, `SETTINGS`, `PLAYING`, `PAUSED`, `RESULTS`.
+  - **Main Menu:** Attractive 3D rotating background camera orbit with custom rounded buttons: Play, Level Select, Character, Settings, and Quit.
+  - **Pause Menu:** Activated via `ESC` key while playing; semi-transparent dark backdrop overlay with Resume, Restart Level, Settings, and Quit to Menu.
+  - **Settings Menu:** Sliders for Master Volume and Camera Sensitivity (0.05x to 0.50x), toggles for Invert Pitch Y and Fullscreen mode, with Save & Back returning cleanly to the previous state (Main Menu or Pause).
+  - **Character Customization:** Interactive screen with a rotating 3D model of the cube character, live selection swatches for 6 shirt colors, persistent selection saved immediately.
+  - **Level Select Grid:** 4-row grid for Worlds 1-4 with 5 levels each (20 levels total). Displays star rating indicators (`***`, `**-`, `*--`, `---`) and recorded best times. Automatically enforces progression: completing the final boss level of a world unlocks the next world.
+  - **Save System:** Human-readable line-based `savegame.txt` next to the executable, storing shirt color, audio volume, camera sensitivity, invert Y, fullscreen preference, unlocked worlds, and per-level best times and star ratings. Automatically loads on startup and saves on changes/completion/quit.
+  - **Verification:**
+    - Headless automated smoke test (`--smoke-test`) validates save file creation, round-trip serialization/deserialization, level reachability, ghost puzzle logic, and high-speed collision with zero crashes.
+    - Headless level validator (`--validate-levels`) validates reachability across all 20 authored courses.
+    - Windowed Cocoa OpenGL display mode runs at a smooth 60 FPS on macOS with interactive raygui-styled UI controls.
+    - Zero compiler warnings under `-Wall -Wextra -pedantic -Werror`.
+
+
 
 
 
