@@ -9,12 +9,14 @@
 #include "audio.h"
 #include "particle.h"
 #include "validator.h"
+#include "game.h"
 
 #include <iostream>
 #include <vector>
 #include <string>
 #include <cassert>
 #include <cmath>
+#include <cstdio>
 
 static const std::vector<std::string> ALL_LEVEL_FILES = {
     "assets/levels/w1_l1.lvl", "assets/levels/w1_l2.lvl", "assets/levels/w1_l3.lvl", "assets/levels/w1_l4.lvl", "assets/levels/w1_l5.lvl",
@@ -199,7 +201,7 @@ static int RunSmokeTest() {
         assert(cam.currentDistance < 4.0f);
     }
 
-    // 8. Milestone 6: Timed Route Puzzle Verification (puzzle_timed.lvl)
+    // 8. Milestone 6: Timed Route Puzzle Verification
     {
         std::cout << "[SMOKE-TEST] Testing Puzzle A: Timed Route (puzzle_timed.lvl)..." << std::endl;
         Level level;
@@ -215,7 +217,7 @@ static int RunSmokeTest() {
         assert(level.doors[0].isOpen);
     }
 
-    // 9. Milestone 6: Ghost-Clone Puzzle Verification (puzzle_ghost.lvl)
+    // 9. Milestone 6: Ghost-Clone Puzzle Verification
     {
         std::cout << "[SMOKE-TEST] Testing Puzzle B: Ghost-Clone Puzzle (puzzle_ghost.lvl)..." << std::endl;
         Level level;
@@ -235,7 +237,7 @@ static int RunSmokeTest() {
         assert(level.doors[0].isOpen);
     }
 
-    // 10. Milestone 7: Level Validator 20-Level Reachability Suite
+    // 10. Milestone 7: 20-Level Reachability Validator
     {
         std::cout << "[SMOKE-TEST] Running Milestone 7 Reachability Validator on all 20 levels..." << std::endl;
         bool validationPassed = LevelValidator::ValidateAllLevels(ALL_LEVEL_FILES);
@@ -243,7 +245,43 @@ static int RunSmokeTest() {
         std::cout << "[SMOKE-TEST] All 20 levels passed reachability verification!" << std::endl;
     }
 
-    std::cout << "[SMOKE-TEST] All Milestone 1 through 7 assertions passed successfully!" << std::endl;
+    // 11. Milestone 8: Save System & Persistence Test
+    {
+        std::cout << "[SMOKE-TEST] Testing SaveData file serialization..." << std::endl;
+        SaveData testSave;
+        testSave.InitDefaults();
+        testSave.chosenColor = 3;
+        testSave.volume = 0.65f;
+        testSave.sensitivity = 0.22f;
+        testSave.invertY = true;
+        testSave.unlockedWorlds = 3;
+        testSave.levels[0].bestTime = 22.4f;
+        testSave.levels[0].stars = 3;
+        testSave.levels[5].bestTime = 34.1f;
+        testSave.levels[5].stars = 2;
+
+        std::string testPath = "test_savegame.txt";
+        bool saved = testSave.Save(testPath);
+        assert(saved);
+
+        SaveData loadedSave;
+        bool loaded = loadedSave.Load(testPath);
+        assert(loaded);
+        assert(loadedSave.chosenColor == 3);
+        assert(std::abs(loadedSave.volume - 0.65f) < 0.01f);
+        assert(std::abs(loadedSave.sensitivity - 0.22f) < 0.01f);
+        assert(loadedSave.invertY == true);
+        assert(loadedSave.unlockedWorlds == 3);
+        assert(std::abs(loadedSave.levels[0].bestTime - 22.4f) < 0.01f);
+        assert(loadedSave.levels[0].stars == 3);
+        assert(std::abs(loadedSave.levels[5].bestTime - 34.1f) < 0.01f);
+        assert(loadedSave.levels[5].stars == 2);
+
+        std::remove(testPath.c_str());
+        std::cout << "[SMOKE-TEST] SaveData file serialization passed cleanly!" << std::endl;
+    }
+
+    std::cout << "[SMOKE-TEST] ALL MILESTONES (M1 through M8) VERIFIED AND PASSED!" << std::endl;
     return 0;
 }
 
@@ -263,7 +301,7 @@ int main(int argc, char* argv[]) {
     const int screenHeight = 720;
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(screenWidth, screenHeight, "Roblox Obby Adventure - M7 Worlds & Levels");
+    InitWindow(screenWidth, screenHeight, "Blocky Obby Adventure");
     if (!IsWindowReady()) {
         std::cerr << "Window could not be initialized. Running smoke test instead." << std::endl;
         return RunSmokeTest();
@@ -272,27 +310,8 @@ int main(int argc, char* argv[]) {
 
     AudioManager::Init();
 
-    int currentLevelIndex = 0;
-    Level level;
-    if (!level.LoadFromFile(ALL_LEVEL_FILES[currentLevelIndex])) {
-        std::cerr << "Failed to load " << ALL_LEVEL_FILES[currentLevelIndex] << std::endl;
-    }
-
-    Player player;
-    level.Reset(player);
-
-    OrbitCamera camera;
-    camera.Init(player.position);
-
-    ParticleSystem particleSystem;
-
-    // Debug cheat modes
-    bool noclipMode = false;
-
-    float screenShakeTimer = 0.0f;
-    float respawnFadeAlpha = 0.0f;
-    int previousDeaths = 0;
-    float accumulator = 0.0f;
+    Game game;
+    game.Init();
 
     while (!WindowShouldClose()) {
         float frameDelta = GetFrameTime();
@@ -300,198 +319,14 @@ int main(int argc, char* argv[]) {
             frameDelta = Constants::MAX_FRAME_DELTA;
         }
 
-        std::vector<AABB> colliders = level.GetSolidColliders();
-
-        // F1: Toggle Noclip Fly Cheat
-        if (IsKeyPressed(KEY_F1)) {
-            noclipMode = !noclipMode;
-            player.velocity = Vector3{ 0.0f, 0.0f, 0.0f };
-        }
-
-        // T: Teleport to next checkpoint or finish (Debug cheat)
-        if (IsKeyPressed(KEY_T)) {
-            bool teleported = false;
-            for (const auto& cp : level.checkpoints) {
-                if (!cp.activated) {
-                    player.position = cp.position;
-                    player.velocity = Vector3{ 0.0f, 0.0f, 0.0f };
-                    teleported = true;
-                    break;
-                }
-            }
-            if (!teleported && level.hasFinish) {
-                player.position = level.finish.triggerAABB.GetCenter();
-                player.velocity = Vector3{ 0.0f, 0.0f, 0.0f };
-            }
-        }
-
-        // Ghost Clone toggle with key G
-        if (IsKeyPressed(KEY_G)) {
-            if (level.ghost.state == GhostRecorder::State::IDLE) {
-                level.ghost.StartRecording();
-            } else if (level.ghost.state == GhostRecorder::State::RECORDING) {
-                level.ghost.StopRecording();
-                player.position = level.spawnPos;
-                player.velocity = Vector3{ 0.0f, 0.0f, 0.0f };
-            } else {
-                level.ghost.Reset();
-            }
-        }
-
-        // Level selection bracket keys ([ and ] or PageUp/PageDown)
-        if (IsKeyPressed(KEY_RIGHT_BRACKET) || IsKeyPressed(KEY_PAGE_DOWN)) {
-            currentLevelIndex = (currentLevelIndex + 1) % ALL_LEVEL_FILES.size();
-            level.LoadFromFile(ALL_LEVEL_FILES[currentLevelIndex]);
-            level.Reset(player);
-            camera.Init(player.position);
-            particleSystem.Clear();
-            previousDeaths = 0;
-        }
-        if (IsKeyPressed(KEY_LEFT_BRACKET) || IsKeyPressed(KEY_PAGE_UP)) {
-            currentLevelIndex = (currentLevelIndex - 1 + static_cast<int>(ALL_LEVEL_FILES.size())) % ALL_LEVEL_FILES.size();
-            level.LoadFromFile(ALL_LEVEL_FILES[currentLevelIndex]);
-            level.Reset(player);
-            camera.Init(player.position);
-            particleSystem.Clear();
-            previousDeaths = 0;
-        }
-
-        Vector3 camFocus = player.position;
-        if (screenShakeTimer > 0.0f) {
-            screenShakeTimer -= frameDelta;
-            float shakeProgress = screenShakeTimer / 0.35f;
-            float shakeMag = 0.25f * shakeProgress;
-            auto randOffset = [shakeMag]() {
-                return (static_cast<float>(rand() % 2000) / 1000.0f - 1.0f) * shakeMag;
-            };
-            camFocus.x += randOffset();
-            camFocus.y += randOffset();
-            camFocus.z += randOffset();
-        }
-
-        camera.Update(camFocus, frameDelta, colliders);
-        particleSystem.Update(frameDelta);
-
-        if (respawnFadeAlpha > 0.0f) {
-            respawnFadeAlpha = std::max(0.0f, respawnFadeAlpha - frameDelta * 2.8f);
-        }
-
-        if (!level.isCompleted) {
-            if (noclipMode) {
-                // Free flying in noclip mode
-                float flySpeed = 16.0f;
-                float yaw = camera.GetYawRadians();
-                Vector3 forward = { -sinf(yaw), 0.0f, -cosf(yaw) };
-                Vector3 right   = {  cosf(yaw), 0.0f, -sinf(yaw) };
-
-                if (IsKeyDown(KEY_W)) player.position = Vector3Add(player.position, Vector3Scale(forward, flySpeed * frameDelta));
-                if (IsKeyDown(KEY_S)) player.position = Vector3Subtract(player.position, Vector3Scale(forward, flySpeed * frameDelta));
-                if (IsKeyDown(KEY_D)) player.position = Vector3Add(player.position, Vector3Scale(right, flySpeed * frameDelta));
-                if (IsKeyDown(KEY_A)) player.position = Vector3Subtract(player.position, Vector3Scale(right, flySpeed * frameDelta));
-                if (IsKeyDown(KEY_SPACE)) player.position.y += flySpeed * frameDelta;
-                if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_C)) player.position.y -= flySpeed * frameDelta;
-
-                level.Update(frameDelta, player);
-            } else {
-                accumulator += frameDelta;
-                while (accumulator >= Constants::PHYSICS_DT) {
-                    PlayerInput input;
-                    if (IsKeyDown(KEY_W)) input.moveForward += 1.0f;
-                    if (IsKeyDown(KEY_S)) input.moveForward -= 1.0f;
-                    if (IsKeyDown(KEY_D)) input.moveRight   += 1.0f;
-                    if (IsKeyDown(KEY_A)) input.moveRight   -= 1.0f;
-                    input.jumpPressed    = IsKeyPressed(KEY_SPACE);
-                    input.jumpHeld       = IsKeyDown(KEY_SPACE);
-                    input.respawnPressed = IsKeyPressed(KEY_R);
-
-                    level.Update(Constants::PHYSICS_DT, player);
-                    colliders = level.GetSolidColliders();
-                    player.UpdatePhysics(Constants::PHYSICS_DT, input, camera.GetYawRadians(), colliders, &particleSystem);
-
-                    if (level.deaths > previousDeaths) {
-                        previousDeaths = level.deaths;
-                        screenShakeTimer = 0.35f;
-                        respawnFadeAlpha = 0.85f;
-                    }
-
-                    accumulator -= Constants::PHYSICS_DT;
-                }
-            }
-        }
-
-        // Shirt Color hotkeys (1-6)
-        if (IsKeyPressed(KEY_ONE)) player.colorIndex = 0;
-        if (IsKeyPressed(KEY_TWO)) player.colorIndex = 1;
-        if (IsKeyPressed(KEY_THREE)) player.colorIndex = 2;
-        if (IsKeyPressed(KEY_FOUR)) player.colorIndex = 3;
-        if (IsKeyPressed(KEY_FIVE)) player.colorIndex = 4;
-        if (IsKeyPressed(KEY_SIX)) player.colorIndex = 5;
+        game.Update(frameDelta);
 
         BeginDrawing();
-        level.DrawSkybox();
-
-        BeginMode3D(camera.GetRaylibCamera());
-        level.Draw();
-        player.DrawShadow(colliders);
-        player.Draw();
-        particleSystem.Draw();
-        EndMode3D();
-
-        if (respawnFadeAlpha > 0.001f) {
-            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(),
-                          Color{ 20, 10, 15, static_cast<unsigned char>(respawnFadeAlpha * 255.0f) });
-        }
-
-        UI::DrawHUD(level.name, level.elapsedTime, level.parTime,
-                   level.GetActivatedCheckpointCount(), level.GetTotalCheckpointCount(), level.deaths);
-
-        UI::DrawVolumeControl(GetScreenWidth() - 320, 20, 150.0f);
-
-        // Debug & Navigation HUD
-        if (noclipMode) {
-            DrawRectangle(20, 135, 460, 28, Color{ 220, 80, 40, 220 });
-            DrawText("[NOCLIP ON] Fly: WASD + Space/Shift | T: Teleport to Checkpoint", 30, 141, 14, WHITE);
-        } else if (level.ghost.state == GhostRecorder::State::RECORDING) {
-            DrawRectangle(20, 135, 420, 28, Color{ 230, 50, 60, 200 });
-            char ghostBuf[64];
-            snprintf(ghostBuf, sizeof(ghostBuf), "[REC] RECORDING GHOST (%.1fs / 20s) - Press G to Finish", level.ghost.recordTimer);
-            DrawText(ghostBuf, 30, 141, 14, WHITE);
-        } else if (level.ghost.state == GhostRecorder::State::PLAYING) {
-            DrawRectangle(20, 135, 420, 28, Color{ 40, 160, 220, 200 });
-            DrawText("[PLAY] GHOST ACTIVE (Holding buttons) - Press G to Reset", 30, 141, 14, WHITE);
-        } else {
-            char navBuf[128];
-            snprintf(navBuf, sizeof(navBuf), "Level [%d/20]: [ / ] Switch | F1: Noclip Cheat | T: Teleport | G: Ghost", currentLevelIndex + 1);
-            DrawText(navBuf, 20, 140, 14, Color{ 230, 240, 255, 210 });
-        }
-
-        if (level.isCompleted) {
-            ResultsAction action = UI::DrawResultsScreen(
-                GetScreenWidth(), GetScreenHeight(),
-                level.elapsedTime, level.parTime, level.deaths, level.starRating
-            );
-
-            if (action == ResultsAction::RETRY) {
-                level.Reset(player);
-                camera.Init(player.position);
-                particleSystem.Clear();
-                previousDeaths = level.deaths;
-                accumulator = 0.0f;
-            } else if (action == ResultsAction::NEXT_LEVEL) {
-                currentLevelIndex = (currentLevelIndex + 1) % ALL_LEVEL_FILES.size();
-                level.LoadFromFile(ALL_LEVEL_FILES[currentLevelIndex]);
-                level.Reset(player);
-                camera.Init(player.position);
-                particleSystem.Clear();
-                previousDeaths = 0;
-                accumulator = 0.0f;
-            }
-        }
-
-        DrawFPS(GetScreenWidth() - 80, 55);
+        game.Draw();
         EndDrawing();
     }
 
+    game.Shutdown();
     AudioManager::Close();
     CloseWindow();
     return 0;

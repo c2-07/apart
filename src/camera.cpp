@@ -21,13 +21,15 @@ void OrbitCamera::Init(Vector3 playerBasePos) {
     currentEye = Vector3Add(targetPos, offset);
 }
 
-void OrbitCamera::Update(Vector3 playerBasePos, float dt, const std::vector<AABB>& obstacles) {
+void OrbitCamera::Update(Vector3 playerBasePos, float dt, const std::vector<AABB>& obstacles,
+                         float mouseSensitivity, bool invertY) {
     // Mouse input for rotation (when right button is held or always if cursor is captured)
     // To allow natural obby control: right mouse drag or free mouse when locked
     Vector2 mouseDelta = GetMouseDelta();
     if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsCursorHidden()) {
-        yaw += mouseDelta.x * Constants::CAM_MOUSE_SENSITIVITY;
-        pitch -= mouseDelta.y * Constants::CAM_MOUSE_SENSITIVITY;
+        yaw += mouseDelta.x * mouseSensitivity;
+        float pitchDir = invertY ? 1.0f : -1.0f;
+        pitch += mouseDelta.y * mouseSensitivity * pitchDir;
     }
 
     // Keyboard controls for camera rotation

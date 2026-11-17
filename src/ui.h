@@ -5,16 +5,20 @@
 enum class ResultsAction {
     NONE,
     RETRY,
-    NEXT_LEVEL
+    NEXT_LEVEL,
+    MENU
 };
 
 namespace UI {
-    // Draws in-game HUD: Level name, timer, checkpoints, deaths
+    // Basic immediate-mode controls
+    bool Button(Rectangle bounds, const char* text, Color baseColor, Color hoverColor, Color textColor = WHITE, int fontSize = 20);
+    bool Slider(Rectangle bounds, const char* label, float* value, float minVal, float maxVal, const char* format = "%.2f");
+    bool Toggle(Rectangle bounds, const char* label, bool* value);
+
+    // In-game HUD
     void DrawHUD(const std::string& levelName, float timer, float parTime, int checkpoints, int totalCheckpoints, int deaths);
+    void DrawVolumeControl(int posX, int posY, float width = 150.0f);
 
-    // Draws Master Volume slider widget
-    void DrawVolumeControl(int posX, int posY, float width = 160.0f);
-
-    // Draws Level Complete results modal
+    // Results modal
     ResultsAction DrawResultsScreen(int screenWidth, int screenHeight, float finalTime, float parTime, int deaths, int stars);
 }

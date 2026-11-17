@@ -12,7 +12,8 @@ struct OrbitCamera {
     Vector3 currentEye;      // Camera position in world
 
     void Init(Vector3 playerBasePos);
-    void Update(Vector3 playerBasePos, float dt, const std::vector<AABB>& obstacles);
+    void Update(Vector3 playerBasePos, float dt, const std::vector<AABB>& obstacles,
+                float mouseSensitivity = 0.18f, bool invertY = false);
     Camera3D GetRaylibCamera() const;
     float GetYawRadians() const;
 };
