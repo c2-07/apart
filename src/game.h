@@ -60,9 +60,20 @@ public:
     int previousDeaths;
     float accumulator;
 
+    // Visual Pass Shaders
+    Shader lightingShader;
+    bool shaderLoaded;
+    int lightDirLoc;
+    int lightColorLoc;
+    int ambientColorLoc;
+    int viewPosLoc;
+    int fogColorLoc;
+    int fogDensityLoc;
+
     Game();
     void Init();
     void Shutdown();
+    void ApplyLightingShader(Vector3 eyePos, int worldId);
 
     void Update(float frameDelta);
     void Draw();

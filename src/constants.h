@@ -52,4 +52,14 @@ namespace Constants {
     constexpr float SURFACE_DECAL_OFFSET_Y = 0.02f; // prevent coplanar z-fighting
     constexpr float SHADOW_OFFSET_Y = 0.02f;        // shadow elevation above surface
     constexpr float SHADOW_HEIGHT = 0.02f;          // shadow thickness
+
+    // Lighting & Atmosphere (Visual Pass Step 2 & 4)
+    constexpr float LIGHT_DIR_X = 0.45f;
+    constexpr float LIGHT_DIR_Y = 0.85f;
+    constexpr float LIGHT_DIR_Z = 0.28f;
+    constexpr float SUN_LIGHT_INTENSITY = 0.65f;
+    constexpr float AMBIENT_LIGHT_INTENSITY = 0.52f;
+    constexpr float OUTLINE_DARKEN_FACTOR = 0.82f;
+    constexpr float OUTLINE_EXPANSION = 0.015f;
+    constexpr float DEFAULT_FOG_DENSITY = 0.005f;
 }

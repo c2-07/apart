@@ -162,6 +162,17 @@ cmake --build build
   - Player drop shadow raised with `SHADOW_OFFSET_Y = 0.02m` and given 0.02m depth thickness to prevent camera grazing angle shimmer.
   - Tunables centralized in `Constants::CLIP_NEAR`, `Constants::CLIP_FAR`, `Constants::CHECKPOINT_PAD_HEIGHT`, etc.
 
+### Step 2: Directional Cartoon Lighting & Ambient Uniforms
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - Authored custom GLSL 330 vertex and fragment shaders in `assets/shaders/lighting.vs` and `assets/shaders/lighting.fs`.
+  - Implemented single directional sunlight term with clamped Lambertian diffuse lighting ($N \cdot L$).
+  - Added ambient environmental fill light uniform ensuring unlit cube faces stay vibrant, saturated, and legible without muddy black shadows.
+  - Uniforms documented with explanation: `lightDir`, `lightColor`, `ambientColor`, `viewPos`, `fogColor`, `fogDensity`.
+  - Refined platform edge wire outlines with `OUTLINE_DARKEN_FACTOR = 0.82f` and `OUTLINE_EXPANSION = 0.015m` for crisp, subtle cartoon border definition.
+  - Applied consistent shader mode across platforms, hazards, avatar, and character customization preview.
+
+
 
 
 

@@ -87,7 +87,15 @@ Game::Game()
       screenShakeTimer(0.0f),
       respawnFadeAlpha(0.0f),
       previousDeaths(0),
-      accumulator(0.0f) {}
+      accumulator(0.0f),
+      lightingShader{},
+      shaderLoaded(false),
+      lightDirLoc(-1),
+      lightColorLoc(-1),
+      ambientColorLoc(-1),
+      viewPosLoc(-1),
+      fogColorLoc(-1),
+      fogDensityLoc(-1) {}
 
 void Game::Init() {
     save.Load();
@@ -96,12 +104,64 @@ void Game::Init() {
     player.colorIndex = save.chosenColor;
     LoadLevelByIndex(0);
     state = AppState::MAIN_MENU;
+
+    // Load custom lighting shader if graphical window is ready
+    if (IsWindowReady()) {
+        lightingShader = LoadShader("assets/shaders/lighting.vs", "assets/shaders/lighting.fs");
+        if (lightingShader.id > 0) {
+            shaderLoaded = true;
+
+            // Uniform locations
+            lightDirLoc = GetShaderLocation(lightingShader, "lightDir");
+            lightColorLoc = GetShaderLocation(lightingShader, "lightColor");
+            ambientColorLoc = GetShaderLocation(lightingShader, "ambientColor");
+            viewPosLoc = GetShaderLocation(lightingShader, "viewPos");
+            fogColorLoc = GetShaderLocation(lightingShader, "fogColor");
+            fogDensityLoc = GetShaderLocation(lightingShader, "fogDensity");
+
+            // Directional sun light uniforms
+            float lDir[3] = { Constants::LIGHT_DIR_X, Constants::LIGHT_DIR_Y, Constants::LIGHT_DIR_Z };
+            float lCol[4] = { Constants::SUN_LIGHT_INTENSITY, Constants::SUN_LIGHT_INTENSITY, Constants::SUN_LIGHT_INTENSITY, 1.0f };
+            float ambCol[4] = { Constants::AMBIENT_LIGHT_INTENSITY, Constants::AMBIENT_LIGHT_INTENSITY, Constants::AMBIENT_LIGHT_INTENSITY, 1.0f };
+            float fogDens = Constants::DEFAULT_FOG_DENSITY;
+
+            SetShaderValue(lightingShader, lightDirLoc, lDir, SHADER_UNIFORM_VEC3);
+            SetShaderValue(lightingShader, lightColorLoc, lCol, SHADER_UNIFORM_VEC4);
+            SetShaderValue(lightingShader, ambientColorLoc, ambCol, SHADER_UNIFORM_VEC4);
+            SetShaderValue(lightingShader, fogDensityLoc, &fogDens, SHADER_UNIFORM_FLOAT);
+        }
+    }
 }
 
 void Game::Shutdown() {
+    if (shaderLoaded) {
+        UnloadShader(lightingShader);
+        shaderLoaded = false;
+    }
+
     save.chosenColor = player.colorIndex;
     save.volume = AudioManager::GetVolume();
     save.Save();
+}
+
+void Game::ApplyLightingShader(Vector3 eyePos, int worldId) {
+    if (!shaderLoaded) return;
+
+    // Camera view position uniform
+    float vPos[3] = { eyePos.x, eyePos.y, eyePos.z };
+    SetShaderValue(lightingShader, viewPosLoc, vPos, SHADER_UNIFORM_VEC3);
+
+    // Horizon fog color uniform
+    WorldPalette pal = GetWorldPalette(worldId);
+    float horizonCol[4] = {
+        pal.skyBottom.r / 255.0f,
+        pal.skyBottom.g / 255.0f,
+        pal.skyBottom.b / 255.0f,
+        1.0f
+    };
+    SetShaderValue(lightingShader, fogColorLoc, horizonCol, SHADER_UNIFORM_VEC4);
+
+    BeginShaderMode(lightingShader);
 }
 
 void Game::LoadLevelByIndex(int index) {
@@ -176,9 +236,11 @@ void Game::UpdateMainMenu() {
 void Game::DrawMainMenu() {
     level.DrawSkybox();
     BeginMode3D(camera.GetRaylibCamera());
+    ApplyLightingShader(camera.currentEye, level.worldId);
     level.Draw();
-    player.DrawShadow(level.GetSolidColliders());
     player.Draw();
+    if (shaderLoaded) EndShaderMode();
+    player.DrawShadow(level.GetSolidColliders());
     EndMode3D();
 
     int sw = GetScreenWidth();
@@ -312,7 +374,9 @@ void Game::DrawCharacterSelect() {
     BeginMode3D(previewCam);
     Vector3 oldPos = player.position;
     player.position = Vector3{ 0.0f, 0.0f, 0.0f };
+    ApplyLightingShader(previewCam.position, 1);
     player.Draw();
+    if (shaderLoaded) EndShaderMode();
     player.position = oldPos;
     EndMode3D();
 
@@ -510,9 +574,11 @@ void Game::DrawPlaying() {
 
     level.DrawSkybox();
     BeginMode3D(camera.GetRaylibCamera());
+    ApplyLightingShader(camera.currentEye, level.worldId);
     level.Draw();
-    player.DrawShadow(colliders);
     player.Draw();
+    if (shaderLoaded) EndShaderMode();
+    player.DrawShadow(colliders);
     particles.Draw();
     EndMode3D();
 

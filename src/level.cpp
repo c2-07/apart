@@ -683,9 +683,9 @@ void Level::Draw() const {
         Vector3 center = b.aabb.GetCenter();
         Vector3 size = b.aabb.GetSize();
         Color faceColor = pal.colors[b.colorIndex];
-        Color wireColor = DarkenColor(faceColor, 0.65f);
+        Color wireColor = DarkenColor(faceColor, Constants::OUTLINE_DARKEN_FACTOR);
         DrawCube(center, size.x, size.y, size.z, faceColor);
-        DrawCubeWires(center, size.x + 0.02f, size.y + 0.02f, size.z + 0.02f, wireColor);
+        DrawCubeWires(center, size.x + Constants::OUTLINE_EXPANSION, size.y + Constants::OUTLINE_EXPANSION, size.z + Constants::OUTLINE_EXPANSION, wireColor);
     }
 
     // 2. Movers
