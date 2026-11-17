@@ -1,0 +1,32 @@
+# 2D Side-Scroller Showcase Level 1
+name 2D Adventure Gateway
+world 1
+killY -10.0
+par 30.0
+
+spawn 0 1 0
+box 0 -0.5 0 8 1 4 0
+
+# Bump block with coin above resting platform
+box 8 0.5 0 6 1 4 1
+bump 8 3.8 1
+
+# Walker patrolling along a ledge
+box 18 1.5 0 8 1 4 2
+walker 18 2.4 2.5
+
+# Checkpoint 1
+box 28 2.0 0 6 1 4 0
+checkpoint 28 2.5 0
+
+# Flyer hovering over hazard gap
+box 36 2.5 0 4 1 4 1
+flyer 40 4.5 1.0 2.0
+box 43 3.0 0 6 1 4 2
+
+# Rotating saw blade along track
+saw 46 5.0 52 5.0 2.5 0.8
+
+# Finish Zone
+box 52 3.5 0 8 1 4 3
+finish 52 5.0 0 4 3 4

@@ -1,0 +1,33 @@
+# 2D Side-Scroller Showcase Level 2: Clockwork Cavern
+name Clockwork Cavern 2D
+world 4
+killY -12.0
+par 35.0
+
+spawn 0 1 0
+box 0 -0.5 0 8 1 4 0
+
+# Multi-coin bump block
+box 8 1.0 0 6 1 4 1
+bump 8 4.3 3
+
+# Dual walkers pacing
+box 19 2.0 0 10 1 4 2
+walker 17 2.9 2.0
+walker 21 2.9 2.0
+
+# Checkpoint
+box 30 2.5 0 6 1 4 0
+checkpoint 30 3.0 0
+
+# Aerial flyer wave
+flyer 35 5.5 1.4 2.5
+box 38 2.8 0 6 1 4 1
+
+# High-speed saw obstacle
+saw 42 4.8 48 4.8 2.5 0.7
+box 46 3.2 0 6 1 4 2
+
+# Final stretch to finish
+box 54 3.5 0 8 1 4 3
+finish 54 5.0 0 4 3 4

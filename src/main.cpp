@@ -570,6 +570,19 @@ static int RunSmokeTest() {
         std::cout << "[SMOKE-TEST] Saw Blade Hazards verified successfully!" << std::endl;
     }
 
+    // 16. 2D Pass Step 5: 2D Level Validation Verification
+    {
+        std::cout << "[SMOKE-TEST] Testing 2D Showcase Levels Validation..." << std::endl;
+        ValidationResult r1 = LevelValidator::ValidateFile("assets/levels2d/level_2d_1.lvl");
+        assert(r1.passed);
+        assert(r1.hasFinish);
+
+        ValidationResult r2 = LevelValidator::ValidateFile("assets/levels2d/level_2d_2.lvl");
+        assert(r2.passed);
+        assert(r2.hasFinish);
+        std::cout << "[SMOKE-TEST] 2D Showcase Levels verified successfully!" << std::endl;
+    }
+
     std::cout << "[SMOKE-TEST] ALL MILESTONES (M1 through M8) VERIFIED AND PASSED!" << std::endl;
     return 0;
 }
@@ -580,7 +593,7 @@ int main(int argc, char* argv[]) {
         if (arg == "--smoke-test") {
             return RunSmokeTest();
         }
-        if (arg == "--validate-levels") {
+        if (arg == "--validate-levels" || arg == "--validate") {
             bool ok = LevelValidator::ValidateAllLevels(ALL_LEVEL_FILES);
             return ok ? 0 : 1;
         }

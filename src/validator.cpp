@@ -10,6 +10,10 @@
 #include "finish_zone.h"
 #include "button.h"
 #include "door.h"
+#include "walker.h"
+#include "flyer.h"
+#include "bump_block.h"
+#include "saw.h"
 #include "constants.h"
 #include "raymath.h"
 #include <iostream>
@@ -39,6 +43,19 @@ static float ComputeMaxJumpDistance(float deltaY, float launchVelY) {
     return Constants::RUN_SPEED * tAir;
 }
 
+static float DistancePointToSegment(const Vec3& pt, const Vec3& a, const Vec3& b) {
+    Vec3 ab = b - a;
+    float lenSq = ab.x * ab.x + ab.y * ab.y + ab.z * ab.z;
+    if (lenSq < 0.0001f) {
+        Vec3 diff = pt - a;
+        return sqrtf(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z);
+    }
+    float t = std::clamp(((pt.x - a.x) * ab.x + (pt.y - a.y) * ab.y + (pt.z - a.z) * ab.z) / lenSq, 0.0f, 1.0f);
+    Vec3 proj = Vec3{ a.x + ab.x * t, a.y + ab.y * t, a.z + ab.z * t };
+    Vec3 diff = pt - proj;
+    return sqrtf(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z);
+}
+
 ValidationResult LevelValidator::ValidateFile(const std::string& filepath) {
     ValidationResult res;
     res.filename = filepath;
@@ -62,18 +79,26 @@ ValidationResult LevelValidator::ValidateFile(const std::string& filepath) {
     }
 
     std::vector<PlatformNode> nodes;
+    std::vector<AABB> solidColliders;
+    std::vector<Vec3> checkpointPositions;
+    std::vector<Walker*> walkers;
+    std::vector<Saw*> saws;
+    std::vector<BumpBlock*> bumpBlocks;
 
     // Node 0: Spawn platform
-    nodes.push_back({
-        AABB::FromCenterSize(Vector3{ level.getSpawnPos().x, level.getSpawnPos().y - 0.5f, level.getSpawnPos().z }, Vector3{ 6.0f, 1.0f, 6.0f }),
-        false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false
-    });
+    AABB spawnAABB = AABB::FromCenterSize(Vector3{ level.getSpawnPos().x, level.getSpawnPos().y - 0.5f, level.getSpawnPos().z }, Vector3{ 6.0f, 1.0f, 6.0f });
+    nodes.push_back({ spawnAABB, false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false });
+    solidColliders.push_back(spawnAABB);
 
     int boxCount = 0;
     int moverCount = 0;
     int hazardCount = 0;
 
     for (const auto& entity : level.getEntities()) {
+        if (entity->isSolid()) {
+            solidColliders.push_back(entity->getBounds());
+        }
+
         if (auto* mover = dynamic_cast<MovingPlatform*>(entity.get())) {
             moverCount++;
             nodes.push_back({ mover->getBounds(), false, 0.0f, mover->getDelta().toRaylib(), false });
@@ -84,12 +109,79 @@ ValidationResult LevelValidator::ValidateFile(const std::string& filepath) {
         } else if (dynamic_cast<Spinner*>(entity.get()) || dynamic_cast<Spikes*>(entity.get())) {
             hazardCount++;
         } else if (auto* cp = dynamic_cast<Checkpoint*>(entity.get())) {
+            checkpointPositions.push_back(cp->getPosition());
             nodes.push_back({ cp->getBounds(), false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false });
         } else if (auto* ct = dynamic_cast<CrumbleTile*>(entity.get())) {
             nodes.push_back({ ct->getBounds(), false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false });
+        } else if (auto* bump = dynamic_cast<BumpBlock*>(entity.get())) {
+            bumpBlocks.push_back(bump);
+            boxCount++;
+            nodes.push_back({ bump->getBounds(), false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false });
+        } else if (auto* walker = dynamic_cast<Walker*>(entity.get())) {
+            walkers.push_back(walker);
+            hazardCount++;
+        } else if (dynamic_cast<Flyer*>(entity.get())) {
+            hazardCount++;
+        } else if (auto* saw = dynamic_cast<Saw*>(entity.get())) {
+            saws.push_back(saw);
+            hazardCount++;
         } else if (auto* plt = dynamic_cast<Platform*>(entity.get())) {
             boxCount++;
             nodes.push_back({ plt->getBounds(), false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false });
+        }
+    }
+
+    // 2D Pass Extended Validation Checks
+    // 1. Walker: warn if range <= 0 or starts inside solid geometry
+    for (auto* walker : walkers) {
+        if (walker->getRange() <= 0.0f) {
+            std::cerr << "[Validator][Warning] " << filepath << ": Walker at ("
+                      << walker->getPosition().x << ", " << walker->getPosition().y << ", " << walker->getPosition().z
+                      << ") has zero patrol range!" << std::endl;
+        }
+        AABB wBox = walker->getBounds();
+        AABB shrunkW{ wBox.getMin() + Vec3{ 0.05f, 0.05f, 0.05f }, wBox.getMax() - Vec3{ 0.05f, 0.05f, 0.05f } };
+        for (const auto& solid : solidColliders) {
+            if (solid.intersects(shrunkW)) {
+                std::cerr << "[Validator][Warning] " << filepath << ": Walker at ("
+                          << walker->getPosition().x << ", " << walker->getPosition().y << ", " << walker->getPosition().z
+                          << ") starts inside solid geometry!" << std::endl;
+                break;
+            }
+        }
+    }
+
+    // 2. Saw: warn if path crosses spawn point or a checkpoint
+    Vec3 spawnPos = level.getSpawnPos();
+    for (auto* saw : saws) {
+        float distToSpawn = DistancePointToSegment(spawnPos, saw->getPointA(), saw->getPointB());
+        if (distToSpawn < saw->getRadius() + Constants::HALF_PLAYER_WIDTH + 0.1f) {
+            std::cerr << "[Validator][Warning] " << filepath << ": Saw path crosses spawn point ("
+                      << spawnPos.x << ", " << spawnPos.y << ", " << spawnPos.z << ")!" << std::endl;
+        }
+        for (const auto& cpPos : checkpointPositions) {
+            float distToCp = DistancePointToSegment(cpPos, saw->getPointA(), saw->getPointB());
+            if (distToCp < saw->getRadius() + 0.6f) {
+                std::cerr << "[Validator][Warning] " << filepath << ": Saw path crosses checkpoint at ("
+                          << cpPos.x << ", " << cpPos.y << ", " << cpPos.z << ")!" << std::endl;
+            }
+        }
+    }
+
+    // 3. BumpBlock: warn if bottom is unreachable from below
+    for (auto* bump : bumpBlocks) {
+        float bottomY = bump->getBounds().getMin().y;
+        AABB beneathBox = AABB::fromCenterSize(
+            Vec3{ bump->getPosition().x, bottomY - 0.45f, bump->getPosition().z },
+            Vec3{ 0.7f, 0.8f, 0.7f }
+        );
+        for (const auto& solid : solidColliders) {
+            if (solid.intersects(beneathBox)) {
+                std::cerr << "[Validator][Warning] " << filepath << ": BumpBlock at ("
+                          << bump->getPosition().x << ", " << bump->getPosition().y << ", " << bump->getPosition().z
+                          << ") bottom is unreachable from below!" << std::endl;
+                break;
+            }
         }
     }
 
