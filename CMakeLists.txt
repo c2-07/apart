@@ -28,6 +28,7 @@ add_executable(obby
     src/ui.cpp
     src/audio.cpp
     src/particle.cpp
+    src/validator.cpp
 )
 
 target_include_directories(obby PRIVATE
