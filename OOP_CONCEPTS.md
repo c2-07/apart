@@ -42,6 +42,10 @@ The codebase has been refactored from a procedural, struct-based codebase into a
 | **Interfaces** | `src/drawable.h`, `src/touchable.h`, `src/saveable.h` | `IDrawable`, `ITouchable`, `ISaveable` | Pure abstract classes containing only pure virtual methods and a virtual destructor, establishing strict behavioral contracts for rendering, player interaction, and file serialization. |
 | **Namespaces** | `src/vec3.h`, `src/entity.h`, `src/game.h`, `src/level.h` | `namespace obby` | Encapsulates all game engine systems within `namespace obby`, preventing naming collisions with global raylib C structs (`Vector3`, `Shader`, `Camera3D`) or third-party libraries. |
 | **STL Container Utilization** | `src/level.h`, `src/sound_bank.h`, `src/game.h` | `vector`, `unique_ptr`, `unordered_map` | Leverages modern standard library containers: `std::vector<std::unique_ptr<Entity>>` for polymorphic ownership, `std::unordered_map<std::string, Sound>` in `SoundBank` for $O(1)$ procedural audio lookup, and `std::unique_ptr<GameState>` for exclusive state ownership. |
+| **Abstract Sub-Hierarchies** | `src/enemy.h/.cpp`, `src/walker.h/.cpp`, `src/flyer.h/.cpp` | `Enemy`, `Walker`, `Flyer` | `Enemy` introduces an intermediate abstract class between `Entity` and concrete enemies. It encapsulates shared state (`m_facingDirection`, `m_isAlive`, `m_flattenTimer`) and template method stomp arbitration, letting derived classes focus strictly on `think()` movement. |
+| **Safe Lifecycle Idiom (Erase-Remove)** | `src/level.cpp`, `src/entity.h` | `Level::Update()` `std::remove_if` | Inactive entities are marked `isExpired() == true` during `update()` and safely pruned afterward via `std::remove_if`. This prevents vector reallocation and iterator invalidation during iteration while letting defeat animations play to completion. |
+| **Separation of Physics & Render Geometry** | `src/bump_block.h/.cpp` | `BumpBlock::getBounds()` vs `draw()` | `BumpBlock` maintains a static, resting AABB for solid player collision while procedurally offsetting its drawn model during bounce animation, guaranteeing collision stability without altering spatial physics grids. |
+| **Parametric Kinematics & Spatial Overlap** | `src/saw.h/.cpp` | `Saw::update()`, `checkCircleOverlap()` | Evaluates continuous linear interpolation along segment $AB$ and tests circular blades against bounding boxes by clamping the circle center to box extents, avoiding heavy physics engines while maintaining fair, responsive hitboxes. |
 
 ---
 
@@ -162,6 +166,53 @@ classDiagram
         +isSolid() bool
     }
 
+    class Enemy {
+        <<abstract>>
+        #int m_facingDirection
+        #bool m_isAlive
+        #bool m_isFlattened
+        #float m_flattenTimer
+        +update(dt, player)
+        +virtual think(dt)*
+        +virtual onStomped()
+        +virtual onHitPlayer(player)
+        +isExpired() bool
+    }
+
+    class Walker {
+        -float m_range
+        -float m_walkSpeed
+        +think(dt)
+        +draw() const
+    }
+
+    class Flyer {
+        -float m_amplitude
+        -float m_waveSpeed
+        -float m_flySpeed
+        +think(dt)
+        +draw() const
+    }
+
+    class BumpBlock {
+        -int m_coinsRemaining
+        -float m_bounceTimer
+        +update(dt, player)
+        +draw() const
+        +isSolid() bool
+    }
+
+    class Saw {
+        -Vec3 m_pointA
+        -Vec3 m_pointB
+        -float m_speed
+        -float m_radius
+        -float m_rotationAngle
+        +update(dt, player)
+        +draw() const
+        +checkCircleOverlap(box) bool
+    }
+
     Entity <|-- Platform : inherits
     Platform <|-- MovingPlatform : multi-level inheritance
     Entity <|-- CrumbleTile : inherits
@@ -172,6 +223,11 @@ classDiagram
     Entity <|-- FinishZone : inherits
     Entity <|-- Button : inherits
     Entity <|-- Door : inherits
+    Entity <|-- Enemy : inherits (abstract)
+    Enemy <|-- Walker : multi-level inheritance
+    Enemy <|-- Flyer : multi-level inheritance
+    Entity <|-- BumpBlock : inherits
+    Entity <|-- Saw : inherits
 ```
 
 ---
@@ -420,3 +476,19 @@ classDiagram
 ### Q7: Where is Multiple Interface Inheritance used, and does it cause the Diamond Problem?
 > **Answer:**  
 > `Entity` implements both `IDrawable` (`draw() const = 0`) and `ITouchable` (`onPlayerTouch(Player&) = 0`). Because both `IDrawable` and `ITouchable` are pure interfaces (containing only pure virtual functions and no data members), there is no shared ancestor state. Hence, it achieves multiple interface implementation cleanly without the Diamond Problem or virtual inheritance overhead.
+
+### Q8: Why did you create an abstract `Enemy` base class instead of deriving `Walker` and `Flyer` directly from `Entity`?
+> **Answer:**  
+> Grouping common enemy mechanics (facing direction, alive state, flatten animation timer, and stomp vs damage arbitration) into an abstract `Enemy` base class avoids duplicating collision and defeat logic across enemy variants. Derived classes like `Walker` and `Flyer` only need to override `think(dt)` to implement their unique ground or aerial movement patterns. In the game loop, `Level::Update()` updates all enemies polymorphically through base `Entity` pointers without needing type switches or `dynamic_cast`.
+
+### Q9: How does `BumpBlock` maintain collision stability during its bounce animation?
+> **Answer:**  
+> `BumpBlock` cleanly separates physical collision geometry from visual rendering offset. Its overridden `getBounds()` method always returns the static resting AABB, preventing the player or physics solver from penetrating or shifting through the block. The procedural upward bounce offset (~0.2 m over 0.15 s) is applied strictly during `draw()`, preserving solid collision invariants while delivering a dynamic visual reaction.
+
+### Q10: How does `Saw` handle movement, rotation, and player collision?
+> **Answer:**  
+> `Saw` inherits from `Entity` as a non-solid hazard and interpolates parametrically along a linear track segment between two endpoints at constant speed. It continuously rotates its triangular blade teeth and tests contact against the player using a circle-vs-AABB distance test (clamping the saw center to the player's bounding box). This approach avoids heavy physics engines while providing a responsive, fair circular hitbox that accurately reflects the spinning blade model.
+
+### Q11: What is the safe-removal idiom (`std::remove_if`), and why is it necessary in `Level::Update()`?
+> **Answer:**  
+> Erasing elements directly from an `std::vector` while iterating over it invalidates iterators, leading to undefined behavior or skipped entities. To avoid this, defeated enemies set a flatten timer, and once the 0.2 s animation completes, `isExpired()` returns `true`. At the end of the update tick, `Level::Update()` safely reclaims inactive entities in a single cache-friendly $O(N)$ pass using the standard erase-remove idiom (`m_entities.erase(std::remove_if(...), m_entities.end())`).

@@ -50,3 +50,35 @@ Every new element adheres strictly to the existing Object-Oriented Programming (
 4. **Step 4:** Implement `Saw`, continuous rotation, track movement, and circle overlap damage. Add smoke test assertions and verify.
 5. **Step 5:** Populate elements across at least 4 level files, expand `--validate-levels`, and verify reachability and syntax compliance.
 6. **Step 6:** Update `OOP_CONCEPTS.md`, Mermaid diagrams, and `README_2D.md`.
+
+---
+
+## 4. Design Decisions & Implementation Records
+
+1. **Encapsulated Entity Lifecycle & Safe Deletion:**
+   - Introduced `virtual bool isExpired() const` on `Entity` (default `false`) and overridden in `Enemy` (`return !m_isAlive && (!m_isFlattened || m_flattenTimer <= 0.0f);`).
+   - `Level::Update()` executes `m_entities.erase(std::remove_if(..., [](const auto& e){ return e->isExpired(); }), m_entities.end())` strictly after iterating through entities.
+   - This prevents iterator invalidation while allowing the 0.2 s flattening and fading animation to run to completion before memory is freed.
+
+2. **BumpBlock Physics vs. Render Decoupling:**
+   - `BumpBlock::getBounds()` strictly returns the resting AABB `AABB::fromCenterSize(m_position, m_size)`.
+   - The upward 0.2 m bounce is applied only as a visual offset in `BumpBlock::draw()`. This ensures that collision resolution against the player remains rock-solid without clipping or tunneling.
+
+3. **Autonomous Navigation Probing:**
+   - `Walker` autonomous patrolling uses `Walker::setLevelColliders()` to query level solids without tight coupling to `Level`.
+   - Wall turnaround checks a forward probe AABB `(size.x * 0.5 + 0.08)`.
+   - Ledge turnaround checks a downward probe point `feetY - 0.20f` situated `0.15 m` ahead of the front foot; if no supporting solid is detected, the walker reverses direction.
+
+4. **Parametric Saw Hitbox:**
+   - `Saw::checkCircleOverlap()` clamps the saw center to the player's bounding box and computes the squared Euclidean distance against `radius * radius`.
+   - In 2D plane ($Z$ aligned), this is exact circle-vs-box collision; in 3D, it evaluates sphere-vs-box, ensuring consistent and fair hitboxes in all perspectives.
+
+5. **Verification Results:**
+   - Built cleanly with zero warnings under `-Wall -Wextra -pedantic -Werror`.
+   - Headless smoke test (`./build/obby --smoke-test`) passed all 16 milestone and 2D test suites:
+     - Section 12: Hearts, invincibility, 3rd-hit respawn, checkpoint full heal, spike instant kill.
+     - Section 13: Walker wall turn, ledge turn, patrol range turn, stomp bounce & defeat, side contact damage, and `std::remove_if` deferred removal.
+     - Section 14: BumpBlock upward hit coin pop, empty block state, side/top inaction, and solid ceiling blocking.
+     - Section 15: Saw blade damage on overlap, no damage when clear, track interpolation, and continuous rotation.
+     - Section 16: Validation and reachability of 2D showcase levels (`level_2d_1.lvl`, `level_2d_2.lvl`).
+   - Full 20-level validator suite (`./build/obby --validate-levels` and `--validate`) passed 20/20 levels with zero warnings.
