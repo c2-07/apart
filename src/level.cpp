@@ -19,6 +19,23 @@ static Color DarkenColor(Color c, float factor) {
     };
 }
 
+static Color LightenColor(Color c, float factor) {
+    return Color{
+        static_cast<unsigned char>(std::min(255, static_cast<int>(c.r * factor + 18))),
+        static_cast<unsigned char>(std::min(255, static_cast<int>(c.g * factor + 18))),
+        static_cast<unsigned char>(std::min(255, static_cast<int>(c.b * factor + 18))),
+        c.a
+    };
+}
+
+static float PositionHash(Vector3 pos) {
+    int ix = static_cast<int>(std::floor(pos.x * 4.0f));
+    int iy = static_cast<int>(std::floor(pos.y * 4.0f));
+    int iz = static_cast<int>(std::floor(pos.z * 4.0f));
+    unsigned int h = static_cast<unsigned int>(ix * 73856093 ^ iy * 19349663 ^ iz * 83492791);
+    return static_cast<float>(h % 1000) / 1000.0f;
+}
+
 WorldPalette GetWorldPalette(int worldId) {
     WorldPalette pal;
     switch (worldId) {
@@ -678,54 +695,130 @@ void Level::DrawSkybox() const {
 void Level::Draw() const {
     WorldPalette pal = GetWorldPalette(worldId);
 
-    // 1. Static Boxes
+    // 1. Static Boxes (with top cap & deterministic color variation)
     for (const auto& b : boxes) {
         Vector3 center = b.aabb.GetCenter();
         Vector3 size = b.aabb.GetSize();
         Color faceColor = pal.colors[b.colorIndex];
-        Color wireColor = DarkenColor(faceColor, Constants::OUTLINE_DARKEN_FACTOR);
-        DrawCube(center, size.x, size.y, size.z, faceColor);
-        DrawCubeWires(center, size.x + Constants::OUTLINE_EXPANSION, size.y + Constants::OUTLINE_EXPANSION, size.z + Constants::OUTLINE_EXPANSION, wireColor);
-    }
 
-    // 2. Movers
-    for (const auto& m : movers) {
-        Color faceColor = pal.colors[m.colorIndex];
-        Color wireColor = DarkenColor(faceColor, 0.6f);
-        DrawCube(m.currentPos, m.size.x, m.size.y, m.size.z, faceColor);
-        DrawCubeWires(m.currentPos, m.size.x + 0.03f, m.size.y + 0.03f, m.size.z + 0.03f, wireColor);
-        DrawCube(Vector3{ m.currentPos.x, m.currentPos.y + m.size.y * 0.5f + Constants::SURFACE_DECAL_OFFSET_Y, m.currentPos.z },
-                 m.size.x * 0.4f, 0.05f, m.size.z * 0.4f, pal.accent);
-    }
+        float h = PositionHash(center);
+        float var = (1.0f - Constants::COLOR_VARIATION_INTENSITY) + h * (Constants::COLOR_VARIATION_INTENSITY * 2.0f);
+        Color variedColor = Color{
+            static_cast<unsigned char>(std::clamp(static_cast<int>(faceColor.r * var), 0, 255)),
+            static_cast<unsigned char>(std::clamp(static_cast<int>(faceColor.g * var), 0, 255)),
+            static_cast<unsigned char>(std::clamp(static_cast<int>(faceColor.b * var), 0, 255)),
+            faceColor.a
+        };
+        Color bodyWire = DarkenColor(variedColor, Constants::OUTLINE_DARKEN_FACTOR);
+        DrawCube(center, size.x, size.y, size.z, variedColor);
+        DrawCubeWires(center, size.x + Constants::OUTLINE_EXPANSION, size.y + Constants::OUTLINE_EXPANSION, size.z + Constants::OUTLINE_EXPANSION, bodyWire);
 
-    // 3. Spinners
-    for (const auto& s : spinners) {
-        DrawCube(s.center, 0.6f, s.height, 0.6f, Color{ 60, 65, 75, 255 });
-        DrawCubeWires(s.center, 0.62f, s.height + 0.02f, 0.62f, Color{ 35, 40, 50, 255 });
-
-        rlPushMatrix();
-        rlTranslatef(s.center.x, s.center.y, s.center.z);
-        rlRotatef(s.currentAngle * RAD2DEG, 0.0f, 1.0f, 0.0f);
-        DrawCube(Vector3{ 0.0f, 0.0f, 0.0f }, s.length, 0.4f, 0.4f, pal.hazard);
-        DrawCubeWires(Vector3{ 0.0f, 0.0f, 0.0f }, s.length + 0.02f, 0.42f, 0.42f, DarkenColor(pal.hazard, 0.6f));
-        rlPopMatrix();
-    }
-
-    // 4. Crumble Tiles
-    for (const auto& c : crumbleTiles) {
-        if (c.state != CrumbleState::FALLEN) {
-            Color cColor = (c.state == CrumbleState::CRUMBLING) ? Color{ 230, 100, 70, 255 } : pal.colors[1];
-            DrawCube(c.currentPos, c.size.x, c.size.y, c.size.z, cColor);
-            DrawCubeWires(c.currentPos, c.size.x + 0.02f, c.size.y + 0.02f, c.size.z + 0.02f, DarkenColor(cColor, 0.6f));
-        } else {
-            DrawCubeWires(c.basePos, c.size.x, c.size.y, c.size.z, Color{ 150, 150, 160, 60 });
+        // Slim top cap with slight overhang in lighter shade for readable jumping ledges
+        if (size.y > Constants::PLATFORM_CAP_HEIGHT * 1.5f) {
+            float capH = Constants::PLATFORM_CAP_HEIGHT;
+            float capOverhang = Constants::PLATFORM_CAP_OVERHANG;
+            Vector3 capCenter = { center.x, center.y + (size.y * 0.5f) - (capH * 0.5f), center.z };
+            Vector3 capSize = { size.x + capOverhang * 2.0f, capH, size.z + capOverhang * 2.0f };
+            Color capColor = LightenColor(variedColor, 1.25f);
+            Color capWire = DarkenColor(capColor, Constants::OUTLINE_DARKEN_FACTOR);
+            DrawCube(capCenter, capSize.x, capSize.y, capSize.z, capColor);
+            DrawCubeWires(capCenter, capSize.x + Constants::OUTLINE_EXPANSION, capSize.y + Constants::OUTLINE_EXPANSION, capSize.z + Constants::OUTLINE_EXPANSION, capWire);
         }
     }
 
-    // 5. Spikes
+    // 2. Movers (Directional chevron stripes and hazard bumpers)
+    for (const auto& m : movers) {
+        Color faceColor = pal.colors[m.colorIndex];
+        Color wireColor = DarkenColor(faceColor, Constants::OUTLINE_DARKEN_FACTOR);
+        DrawCube(m.currentPos, m.size.x, m.size.y, m.size.z, faceColor);
+        DrawCubeWires(m.currentPos, m.size.x + Constants::OUTLINE_EXPANSION, m.size.y + Constants::OUTLINE_EXPANSION, m.size.z + Constants::OUTLINE_EXPANSION, wireColor);
+
+        // Top cap with directional chevron stripes
+        float capH = 0.08f;
+        Vector3 capPos = { m.currentPos.x, m.currentPos.y + m.size.y * 0.5f - capH * 0.5f, m.currentPos.z };
+        Color capCol = LightenColor(faceColor, 1.2f);
+        DrawCube(capPos, m.size.x + 0.04f, capH, m.size.z + 0.04f, capCol);
+
+        // Chevron directional stripes on top
+        float topY = m.currentPos.y + m.size.y * 0.5f + Constants::SURFACE_DECAL_OFFSET_Y;
+        bool moveAlongX = std::abs(m.delta.x) > std::abs(m.delta.z);
+        Color stripeCol = pal.accent;
+        for (int i = -1; i <= 1; ++i) {
+            Vector3 sPos = moveAlongX ?
+                Vector3{ m.currentPos.x + i * 0.8f, topY, m.currentPos.z } :
+                Vector3{ m.currentPos.x, topY, m.currentPos.z + i * 0.8f };
+            Vector3 sSize = moveAlongX ?
+                Vector3{ 0.35f, 0.03f, m.size.z * 0.6f } :
+                Vector3{ m.size.x * 0.6f, 0.03f, 0.35f };
+            DrawCube(sPos, sSize.x, sSize.y, sSize.z, stripeCol);
+        }
+
+        // Hazard warning edge bumpers on bottom sides
+        Color hazardBumper = Color{ 245, 205, 45, 255 };
+        DrawCube(Vector3{ m.currentPos.x, m.currentPos.y - m.size.y * 0.45f, m.currentPos.z },
+                 m.size.x + 0.06f, m.size.y * 0.15f, m.size.z + 0.06f, hazardBumper);
+    }
+
+    // 3. Spinners (Segmented warning stripes & center hazard beacon)
+    for (const auto& s : spinners) {
+        // Center pivot shaft
+        DrawCube(s.center, 0.65f, s.height, 0.65f, Color{ 50, 55, 65, 255 });
+        DrawCubeWires(s.center, 0.67f, s.height + 0.02f, 0.67f, Color{ 25, 30, 40, 255 });
+
+        // Flashing red warning beacon on top of pivot
+        float beaconPulse = 0.5f + 0.5f * sinf(static_cast<float>(GetTime()) * 8.0f);
+        Color beaconCol = Color{ 255, static_cast<unsigned char>(30 * beaconPulse), 40, 255 };
+        Vector3 beaconPos = { s.center.x, s.center.y + s.height * 0.5f + 0.15f, s.center.z };
+        DrawCube(beaconPos, 0.35f, 0.3f, 0.35f, beaconCol);
+        DrawCubeWires(beaconPos, 0.37f, 0.32f, 0.37f, Color{ 180, 20, 30, 255 });
+
+        // Rotating hazard bar with alternating warning segments
+        rlPushMatrix();
+        rlTranslatef(s.center.x, s.center.y, s.center.z);
+        rlRotatef(s.currentAngle * RAD2DEG, 0.0f, 1.0f, 0.0f);
+
+        int segCount = 6;
+        float segLen = s.length / static_cast<float>(segCount);
+        for (int i = 0; i < segCount; ++i) {
+            float segX = -s.length * 0.5f + (i + 0.5f) * segLen;
+            Color segCol = (i % 2 == 0) ? pal.hazard : Color{ 40, 45, 55, 255 };
+            DrawCube(Vector3{ segX, 0.0f, 0.0f }, segLen * 0.95f, 0.42f, 0.42f, segCol);
+            DrawCubeWires(Vector3{ segX, 0.0f, 0.0f }, segLen * 0.97f, 0.44f, 0.44f, DarkenColor(segCol, 0.65f));
+        }
+        rlPopMatrix();
+    }
+
+    // 4. Crumble Tiles (Cracked fracture insets & warning state)
+    for (const auto& c : crumbleTiles) {
+        if (c.state != CrumbleState::FALLEN) {
+            Color cColor = (c.state == CrumbleState::CRUMBLING) ? Color{ 245, 85, 45, 255 } : pal.colors[1];
+            DrawCube(c.currentPos, c.size.x, c.size.y, c.size.z, cColor);
+            DrawCubeWires(c.currentPos, c.size.x + Constants::OUTLINE_EXPANSION, c.size.y + Constants::OUTLINE_EXPANSION, c.size.z + Constants::OUTLINE_EXPANSION, DarkenColor(cColor, 0.65f));
+
+            // 4 Fractured surface insets showing fragility
+            float insetH = 0.04f;
+            float insetY = c.currentPos.y + c.size.y * 0.5f + Constants::SURFACE_DECAL_OFFSET_Y;
+            float halfW = c.size.x * 0.42f;
+            float halfD = c.size.z * 0.42f;
+            Color crackCol = (c.state == CrumbleState::CRUMBLING) ? Color{ 255, 180, 50, 255 } : LightenColor(cColor, 1.15f);
+
+            DrawCube(Vector3{ c.currentPos.x - halfW * 0.5f, insetY, c.currentPos.z - halfD * 0.5f }, halfW * 0.9f, insetH, halfD * 0.9f, crackCol);
+            DrawCube(Vector3{ c.currentPos.x + halfW * 0.5f, insetY, c.currentPos.z - halfD * 0.5f }, halfW * 0.9f, insetH, halfD * 0.9f, crackCol);
+            DrawCube(Vector3{ c.currentPos.x - halfW * 0.5f, insetY, c.currentPos.z + halfD * 0.5f }, halfW * 0.9f, insetH, halfD * 0.9f, crackCol);
+            DrawCube(Vector3{ c.currentPos.x + halfW * 0.5f, insetY, c.currentPos.z + halfD * 0.5f }, halfW * 0.9f, insetH, halfD * 0.9f, crackCol);
+        } else {
+            DrawCubeWires(c.basePos, c.size.x, c.size.y, c.size.z, Color{ 160, 170, 185, 70 });
+        }
+    }
+
+    // 5. Spikes (Hazard-striped base plate & metallic sharp teeth)
     for (const auto& sp : spikesList) {
+        // Base plate with dark hazard trim
         DrawCube(Vector3{ sp.center.x, sp.center.y - sp.size.y * 0.4f, sp.center.z },
-                 sp.size.x, sp.size.y * 0.2f, sp.size.z, Color{ 50, 50, 60, 255 });
+                 sp.size.x, sp.size.y * 0.2f, sp.size.z, Color{ 40, 45, 55, 255 });
+        DrawCubeWires(Vector3{ sp.center.x, sp.center.y - sp.size.y * 0.4f, sp.center.z },
+                      sp.size.x + 0.02f, sp.size.y * 0.22f, sp.size.z + 0.02f, Color{ 25, 30, 35, 255 });
+
         int countX = std::max(1, static_cast<int>(sp.size.x / 1.0f));
         int countZ = std::max(1, static_cast<int>(sp.size.z / 1.0f));
         float stepX = sp.size.x / countX;
@@ -735,18 +828,32 @@ void Level::Draw() const {
                 float sx = (sp.center.x - sp.size.x * 0.5f) + (ix + 0.5f) * stepX;
                 float sz = (sp.center.z - sp.size.z * 0.5f) + (iz + 0.5f) * stepZ;
                 Vector3 spikePos = { sx, sp.center.y, sz };
-                DrawCube(spikePos, stepX * 0.7f, sp.size.y * 0.8f, stepZ * 0.7f, pal.hazard);
-                DrawCubeWires(spikePos, stepX * 0.72f, sp.size.y * 0.82f, stepZ * 0.72f, DarkenColor(pal.hazard, 0.6f));
+
+                // Lower body (hazard red)
+                DrawCube(spikePos, stepX * 0.65f, sp.size.y * 0.75f, stepZ * 0.65f, pal.hazard);
+                DrawCubeWires(spikePos, stepX * 0.67f, sp.size.y * 0.77f, stepZ * 0.67f, DarkenColor(pal.hazard, 0.6f));
+
+                // Sharp silver-metallic tip
+                Vector3 tipPos = { sx, sp.center.y + sp.size.y * 0.45f, sz };
+                DrawCube(tipPos, stepX * 0.35f, sp.size.y * 0.25f, stepZ * 0.35f, Color{ 230, 235, 245, 255 });
             }
         }
     }
 
-    // 6. Bounce Pads
+    // 6. Bounce Pads (High-contrast launch rings and spring center)
     for (const auto& bp : bouncePads) {
-        DrawCube(bp.center, bp.size.x, bp.size.y, bp.size.z, Color{ 250, 220, 50, 255 });
-        DrawCubeWires(bp.center, bp.size.x + 0.03f, bp.size.y + 0.03f, bp.size.z + 0.03f, Color{ 200, 160, 20, 255 });
-        Vector3 springPos = { bp.center.x, bp.center.y + bp.size.y * 0.5f + Constants::SURFACE_DECAL_OFFSET_Y, bp.center.z };
-        DrawCube(springPos, bp.size.x * 0.5f, 0.06f, bp.size.z * 0.5f, Color{ 255, 60, 160, 255 });
+        // Base plate
+        DrawCube(bp.center, bp.size.x, bp.size.y, bp.size.z, Color{ 250, 215, 40, 255 });
+        DrawCubeWires(bp.center, bp.size.x + 0.03f, bp.size.y + 0.03f, bp.size.z + 0.03f, Color{ 190, 150, 20, 255 });
+
+        // Outer cyan launch ring
+        float decalY = bp.center.y + bp.size.y * 0.5f + Constants::SURFACE_DECAL_OFFSET_Y;
+        DrawCube(Vector3{ bp.center.x, decalY, bp.center.z }, bp.size.x * 0.82f, 0.04f, bp.size.z * 0.82f, Color{ 40, 200, 235, 255 });
+
+        // Inner hot-pink/magenta launch bullseye pad
+        Vector3 springPos = { bp.center.x, decalY + 0.02f, bp.center.z };
+        DrawCube(springPos, bp.size.x * 0.5f, 0.05f, bp.size.z * 0.5f, Color{ 255, 45, 150, 255 });
+        DrawCubeWires(springPos, bp.size.x * 0.52f, 0.06f, bp.size.z * 0.52f, Color{ 200, 25, 110, 255 });
     }
 
     // 7. Buttons (Milestone 6)

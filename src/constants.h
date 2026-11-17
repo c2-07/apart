@@ -62,4 +62,9 @@ namespace Constants {
     constexpr float OUTLINE_DARKEN_FACTOR = 0.82f;
     constexpr float OUTLINE_EXPANSION = 0.015f;
     constexpr float DEFAULT_FOG_DENSITY = 0.005f;
+
+    // Platform Detail & Variation (Visual Pass Step 3)
+    constexpr float PLATFORM_CAP_HEIGHT = 0.10f;
+    constexpr float PLATFORM_CAP_OVERHANG = 0.04f;
+    constexpr float COLOR_VARIATION_INTENSITY = 0.06f;
 }

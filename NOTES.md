@@ -172,6 +172,18 @@ cmake --build build
   - Refined platform edge wire outlines with `OUTLINE_DARKEN_FACTOR = 0.82f` and `OUTLINE_EXPANSION = 0.015m` for crisp, subtle cartoon border definition.
   - Applied consistent shader mode across platforms, hazards, avatar, and character customization preview.
 
+### Step 3: Platform Detailing, Hash Variation & Hazard Styling
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - Added slim top caps (`PLATFORM_CAP_HEIGHT = 0.10m`) with subtle overhang (`PLATFORM_CAP_OVERHANG = 0.04m`) in a lighter tint (`LightenColor(variedColor, 1.25f)`) so platform jump landing edges read clearly.
+  - Implemented deterministic 3D spatial hashing (`PositionHash(center)`) to vary base platform face brightness by $\pm 6\%$, removing visual monotony from repeated tiles.
+  - **Movers:** Directional chevron indicator stripes aligned with movement axis and yellow hazard bumper trims along the bottom side rims.
+  - **Spinners:** Center pivot shaft with a flashing red hazard warning beacon (`GetTime()` pulse) and alternating dual-tone hazard segments across the rotating arm.
+  - **Crumble Tiles:** 4 fractured surface insets showing fragile structural cracks; state-driven color shifts to flashing amber-red when crumbling.
+  - **Spikes:** Dark hazard-trimmed base block with metallic silver tips atop hazard-red teeth.
+  - **Bounce Pads:** High-contrast cyan perimeter ring with hot-pink launch bullseye pad.
+
+
 
 
 
