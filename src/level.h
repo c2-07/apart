@@ -1,188 +1,107 @@
 #pragma once
 #include "raylib.h"
-#include "collision.h"
-#include "player.h"
+#include "entity.h"
+#include "ghost_recorder.h"
+#include "render_utils.h"
+#include "button.h"
+#include "door.h"
+#include "checkpoint.h"
+#include "finish_zone.h"
+#include "particle.h"
 
 #include <string>
 #include <vector>
+#include <memory>
 
-struct LevelBox {
-    AABB aabb;
-    int colorIndex;
-};
+struct Player;
 
-struct Checkpoint {
-    Vector3 position;
-    AABB triggerAABB;
-    bool activated;
-};
+namespace obby {
 
-struct FinishZone {
-    AABB triggerAABB;
-};
-
-struct Mover {
-    Vector3 basePos;
-    Vector3 size;
-    Vector3 delta;
-    float period;
-    int colorIndex;
-
-    Vector3 currentPos;
-    Vector3 frameDisplacement;
-    AABB GetAABB() const;
-};
-
-struct Spinner {
-    Vector3 center;
-    float length;
-    float height;
-    float speed;
-    float currentAngle;
-    bool CheckOverlapWithPlayer(const AABB& playerAABB) const;
-};
-
-enum class CrumbleState {
-    STABLE,
-    CRUMBLING,
-    FALLEN
-};
-
-struct CrumbleTile {
-    Vector3 basePos;
-    Vector3 size;
-    float delay;
-    float respawnTime;
-
-    CrumbleState state;
-    float timer;
-    Vector3 currentPos;
-    AABB GetAABB() const;
-    bool IsSolid() const;
-};
-
-struct Spikes {
-    Vector3 center;
-    Vector3 size;
-    AABB aabb;
-};
-
-struct BouncePad {
-    Vector3 center;
-    Vector3 size;
-    float strength;
-    AABB aabb;
-};
-
-// Milestone 6: Solo Cooperative Puzzles
-struct ButtonEntity {
-    int id;
-    Vector3 position;
-    float duration;
-    float currentTimer;
-    bool isPressed;
-    bool isActive;
-    AABB triggerAABB;
-    AABB baseAABB;
-};
-
-struct DoorEntity {
-    int id;
-    Vector3 center;
-    Vector3 size;
-    AABB aabb;
-    bool isOpen;
-};
-
-struct GhostFrame {
-    Vector3 position;
-    float yaw;
-    bool isGrounded;
-};
-
-class GhostRecorder {
-public:
-    enum class State {
-        IDLE,
-        RECORDING,
-        PLAYING
-    };
-
-    State state;
-    std::vector<GhostFrame> frames;
-    size_t playbackIndex;
-    float recordTimer;
-    static constexpr float MAX_RECORD_TIME = 20.0f;
-
-    GhostRecorder();
-    void StartRecording();
-    void StopRecording();
-    void StartPlayback();
-    void Reset();
-
-    void RecordTick(Vector3 pos, float yaw, bool grounded);
-    void UpdatePlayback();
-
-    Vector3 GetCurrentPos() const;
-    float GetCurrentYaw() const;
-    bool HasActiveGhost() const;
-    AABB GetAABB() const;
-    void Draw() const;
-};
-
-struct WorldPalette {
-    Color skyTop;
-    Color skyBottom;
-    Color fogColor;
-    Color lightColor;
-    Color ambientColor;
-    float fogDensity;
-    Color colors[4];
-    Color hazard;
-    Color accent;
-};
-
-WorldPalette GetWorldPalette(int worldId);
-
+/**
+ * @brief Represents a platforming course containing polymorphically managed entities.
+ * Demonstrates:
+ * - Ownership via std::vector<std::unique_ptr<Entity>>
+ * - Polymorphic update() and draw() dispatch without type switches
+ * - Factory method instantiation (EntityFactory)
+ * - Exception throwing on corrupted level data (LevelParseError)
+ */
 class Level {
+private:
+    std::string m_name;
+    int m_worldId;
+    float m_killY;
+    float m_parTime;
+    Vec3 m_spawnPos;
+
+    // Polymorphic entity container (Level is the unique owner)
+    std::vector<std::unique_ptr<Entity>> m_entities;
+
+    // Non-owning observer pointers for fast puzzle synchronization
+    std::vector<Button*> m_buttons;
+    std::vector<Door*> m_doors;
+    std::vector<Checkpoint*> m_checkpoints;
+    FinishZone* m_finishZone;
+
 public:
-    std::string name;
-    int worldId;
-    float killY;
-    float parTime;
-    Vector3 spawnPos;
-
-    std::vector<LevelBox> boxes;
-    std::vector<Checkpoint> checkpoints;
-    FinishZone finish;
-    bool hasFinish;
-
-    std::vector<Mover> movers;
-    std::vector<Spinner> spinners;
-    std::vector<CrumbleTile> crumbleTiles;
-    std::vector<Spikes> spikesList;
-    std::vector<BouncePad> bouncePads;
-
-    // Milestone 6: Buttons and Doors
-    std::vector<ButtonEntity> buttons;
-    std::vector<DoorEntity> doors;
+    // Puzzle Ghost Recorder
     GhostRecorder ghost;
 
-    // Runtime state
+    // Runtime metrics
     float elapsedTime;
     int checkpointsActivated;
     int deaths;
     bool isCompleted;
     int starRating;
 
+    // Compatibility fields for legacy access
+    std::string name;
+    int worldId;
+    float killY;
+    float parTime;
+    Vector3 spawnPos;
+    bool hasFinish;
+
     Level();
+    ~Level() = default;
+
+    // Move-only semantics (owns unique_ptrs)
+    Level(const Level&) = delete;
+    Level& operator=(const Level&) = delete;
+    Level(Level&&) noexcept = default;
+    Level& operator=(Level&&) noexcept = default;
+
+    // Encapsulated Getters & Setters
+    const std::string& getName() const { return m_name; }
+    int getWorldId() const { return m_worldId; }
+    float getKillY() const { return m_killY; }
+    float getParTime() const { return m_parTime; }
+    const Vec3& getSpawnPos() const { return m_spawnPos; }
+    const std::vector<std::unique_ptr<Entity>>& getEntities() const { return m_entities; }
+
+    Button* getButton(size_t index) const;
+    Door* getDoor(size_t index) const;
+    Checkpoint* getCheckpoint(size_t index) const;
+    FinishZone* getFinishZone() const { return m_finishZone; }
+    const std::vector<Button*>& getButtons() const { return m_buttons; }
+    const std::vector<Door*>& getDoors() const { return m_doors; }
+    const std::vector<Checkpoint*>& getCheckpoints() const { return m_checkpoints; }
+
+    int getActivatedCheckpointCount() const;
+    int getTotalCheckpointCount() const;
+    int GetActivatedCheckpointCount() const { return getActivatedCheckpointCount(); }
+    int GetTotalCheckpointCount() const { return getTotalCheckpointCount(); }
+
+    // Core Level lifecycle
     bool LoadFromFile(const std::string& filepath);
     void Reset(Player& player);
     void Update(float dt, Player& player, ParticleSystem* particles = nullptr);
     void Draw() const;
     void DrawSkybox() const;
 
+    // Polymorphic solid collider extraction
     std::vector<AABB> GetSolidColliders() const;
-    int GetActivatedCheckpointCount() const;
-    int GetTotalCheckpointCount() const;
 };
+
+} // namespace obby
+
+using Level = obby::Level;

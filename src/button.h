@@ -15,6 +15,7 @@ private:
     float m_currentTimer;
     bool m_isPressed;
     bool m_isActive;
+    bool m_ghostTouching;
 
 public:
     Button(int id, const Vec3& position, float duration);
@@ -28,6 +29,7 @@ public:
 
     void setPressed(bool pressed);
     void setActive(bool active) { m_isActive = active; }
+    void setGhostTouching(bool touching) { m_ghostTouching = touching; }
     AABB getTriggerBounds() const;
 
     virtual void update(float dt, Player& player) override;

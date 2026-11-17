@@ -491,16 +491,16 @@ void Game::UpdatePlaying(float frameDelta) {
     // T Cheat: Teleport
     if (IsKeyPressed(KEY_T)) {
         bool teleported = false;
-        for (const auto& cp : level.checkpoints) {
-            if (!cp.activated) {
-                player.position = cp.position;
+        for (const auto* cp : level.getCheckpoints()) {
+            if (!cp->isActivated()) {
+                player.position = cp->getPosition();
                 player.velocity = Vector3{ 0.0f, 0.0f, 0.0f };
                 teleported = true;
                 break;
             }
         }
-        if (!teleported && level.hasFinish) {
-            player.position = level.finish.triggerAABB.GetCenter();
+        if (!teleported && level.getFinishZone() != nullptr) {
+            player.position = level.getFinishZone()->getBounds().getCenter();
             player.velocity = Vector3{ 0.0f, 0.0f, 0.0f };
         }
     }

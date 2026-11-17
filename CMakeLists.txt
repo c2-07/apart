@@ -25,6 +25,7 @@ add_executable(obby
     src/aabb.cpp
     src/render_utils.cpp
     src/entity.cpp
+    src/entity_factory.cpp
     src/platform.cpp
     src/moving_platform.cpp
     src/crumble_tile.cpp
@@ -35,6 +36,7 @@ add_executable(obby
     src/finish_zone.cpp
     src/button.cpp
     src/door.cpp
+    src/ghost_recorder.cpp
     src/game.cpp
     src/collision.cpp
     src/camera.cpp

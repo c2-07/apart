@@ -24,3 +24,7 @@ float PositionHash(Vector3 pos);
 } // namespace obby
 
 using WorldPalette = obby::WorldPalette;
+using obby::GetWorldPalette;
+using obby::DarkenColor;
+using obby::LightenColor;
+using obby::PositionHash;

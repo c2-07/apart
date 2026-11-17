@@ -210,12 +210,12 @@ static int RunSmokeTest() {
         assert(loaded);
         Player player;
         level.Reset(player);
-        assert(!level.doors[0].isOpen);
+        assert(!level.getDoor(0)->isOpen());
 
-        player.position = level.buttons[0].position;
+        player.position = level.getButton(0)->getPosition();
         level.Update(dt, player);
-        assert(level.buttons[0].isActive);
-        assert(level.doors[0].isOpen);
+        assert(level.getButton(0)->isActive());
+        assert(level.getDoor(0)->isOpen());
     }
 
     // 9. Milestone 6: Ghost-Clone Puzzle Verification
@@ -228,14 +228,14 @@ static int RunSmokeTest() {
         level.Reset(player);
 
         level.ghost.StartRecording();
-        player.position = level.buttons[0].position;
+        player.position = level.getButton(0)->getPosition();
         for (int i = 0; i < 120; ++i) level.Update(dt, player);
         level.ghost.StopRecording();
 
-        player.position = level.spawnPos;
+        player.position = level.getSpawnPos();
         for (int i = 0; i < 60; ++i) level.Update(dt, player);
-        assert(level.buttons[0].isPressed);
-        assert(level.doors[0].isOpen);
+        assert(level.getButton(0)->isPressed());
+        assert(level.getDoor(0)->isOpen());
     }
 
     // 10. Milestone 7: 20-Level Reachability Validator

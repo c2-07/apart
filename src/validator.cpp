@@ -1,5 +1,15 @@
 #include "validator.h"
 #include "level.h"
+#include "platform.h"
+#include "moving_platform.h"
+#include "crumble_tile.h"
+#include "spikes.h"
+#include "spinner.h"
+#include "bounce_pad.h"
+#include "checkpoint.h"
+#include "finish_zone.h"
+#include "button.h"
+#include "door.h"
 #include "constants.h"
 #include "raymath.h"
 #include <iostream>
@@ -42,14 +52,11 @@ ValidationResult LevelValidator::ValidateFile(const std::string& filepath) {
         return res;
     }
 
-    res.levelName = level.name;
-    res.worldId = level.worldId;
-    res.boxCount = static_cast<int>(level.boxes.size());
-    res.moverCount = static_cast<int>(level.movers.size());
-    res.hazardCount = static_cast<int>(level.spinners.size() + level.spikesList.size());
-    res.hasFinish = level.hasFinish;
+    res.levelName = level.getName();
+    res.worldId = level.getWorldId();
+    res.hasFinish = (level.getFinishZone() != nullptr);
 
-    if (!level.hasFinish) {
+    if (!res.hasFinish) {
         std::cerr << "[Validator] " << filepath << " has no finish zone!" << std::endl;
         return res;
     }
@@ -58,34 +65,40 @@ ValidationResult LevelValidator::ValidateFile(const std::string& filepath) {
 
     // Node 0: Spawn platform
     nodes.push_back({
-        AABB::FromCenterSize(Vector3{ level.spawnPos.x, level.spawnPos.y - 0.5f, level.spawnPos.z }, Vector3{ 6.0f, 1.0f, 6.0f }),
+        AABB::FromCenterSize(Vector3{ level.getSpawnPos().x, level.getSpawnPos().y - 0.5f, level.getSpawnPos().z }, Vector3{ 6.0f, 1.0f, 6.0f }),
         false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false
     });
 
-    for (const auto& b : level.boxes) {
-        nodes.push_back({ b.aabb, false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false });
-    }
-    for (const auto& cp : level.checkpoints) {
-        nodes.push_back({
-            AABB::FromCenterSize(Vector3{ cp.position.x, cp.position.y - 0.25f, cp.position.z }, Vector3{ 3.0f, 0.5f, 3.0f }),
-            false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false
-        });
-    }
-    for (const auto& m : level.movers) {
-        nodes.push_back({ m.GetAABB(), false, 0.0f, m.delta, false });
-    }
-    for (const auto& c : level.crumbleTiles) {
-        nodes.push_back({ c.GetAABB(), false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false });
-    }
-    for (const auto& bp : level.bouncePads) {
-        nodes.push_back({ bp.aabb, true, bp.strength, Vector3{ 0.0f, 0.0f, 0.0f }, false });
-    }
-    for (const auto& btn : level.buttons) {
-        nodes.push_back({ btn.baseAABB, false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false });
+    int boxCount = 0;
+    int moverCount = 0;
+    int hazardCount = 0;
+
+    for (const auto& entity : level.getEntities()) {
+        if (auto* mover = dynamic_cast<MovingPlatform*>(entity.get())) {
+            moverCount++;
+            nodes.push_back({ mover->getBounds(), false, 0.0f, mover->getDelta().toRaylib(), false });
+        } else if (auto* bp = dynamic_cast<BouncePad*>(entity.get())) {
+            nodes.push_back({ bp->getBounds(), true, bp->getStrength(), Vector3{ 0.0f, 0.0f, 0.0f }, false });
+        } else if (auto* btn = dynamic_cast<Button*>(entity.get())) {
+            nodes.push_back({ btn->getBounds(), false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false });
+        } else if (dynamic_cast<Spinner*>(entity.get()) || dynamic_cast<Spikes*>(entity.get())) {
+            hazardCount++;
+        } else if (auto* cp = dynamic_cast<Checkpoint*>(entity.get())) {
+            nodes.push_back({ cp->getBounds(), false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false });
+        } else if (auto* ct = dynamic_cast<CrumbleTile*>(entity.get())) {
+            nodes.push_back({ ct->getBounds(), false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false });
+        } else if (auto* plt = dynamic_cast<Platform*>(entity.get())) {
+            boxCount++;
+            nodes.push_back({ plt->getBounds(), false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, false });
+        }
     }
 
+    res.boxCount = boxCount;
+    res.moverCount = moverCount;
+    res.hazardCount = hazardCount;
+
     int finishNodeIndex = static_cast<int>(nodes.size());
-    nodes.push_back({ level.finish.triggerAABB, false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, true });
+    nodes.push_back({ level.getFinishZone()->getBounds(), false, 0.0f, Vector3{ 0.0f, 0.0f, 0.0f }, true });
 
     size_t numNodes = nodes.size();
     std::vector<bool> visited(numNodes, false);

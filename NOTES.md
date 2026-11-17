@@ -273,6 +273,36 @@ cmake --build build
 7. **Comprehensive OOP Documentation (`OOP_CONCEPTS.md`):**
    - Viva-ready mapping table and Mermaid class diagrams.
 
+### OOP Refactor Progress
+
+#### Step 1: Encapsulated Value Classes & Operator Overloading (`Vec3`, `AABB`)
+- **Status:** COMPLETED (Commit: `299b26e`)
+- **Details:** Created encapsulated `Vec3` class with overloaded arithmetic operators (`+`, `-`, `*`, `/`, `+=`, `-=`, `==`, `!=`, unary `-`, friend `scalar * Vec3`) and spatial methods (`length`, `lengthSq`, `normalized`, `dot`, `cross`). Created encapsulated `AABB` class with constructors (`fromMinMax`, `fromCenterSize`, `fromMinSize`), spatial intersection (`intersects`, `contains`, `operator==`, `operator!=`), per-axis resolution (`resolveAxis`), and slab raycast (`raycast`).
+
+#### Step 2: Abstract Entity Base Class & Derived Hierarchy
+- **Status:** COMPLETED (Commit: `6b9b32e`)
+- **Details:** Created abstract base class `Entity` inheriting from pure virtual interfaces `IDrawable` and `ITouchable` (multiple interface inheritance). Implemented 10 derived entity classes in their own header/source files:
+  - `Platform`: Base static AABB platform.
+  - `MovingPlatform`: Inherits from `Platform` (multi-level inheritance) and calculates per-frame displacement.
+  - `CrumbleTile`: Stepped platform with timed shake and fall state transitions.
+  - `Spikes`: Lethal hazard triggering player respawn upon collision.
+  - `Spinner`: Rotating obstacle bar with trigonometric angular velocity.
+  - `BouncePad`: Spring launcher applying vertical impulse to player velocity.
+  - `Checkpoint`: Respawn location with waving 3-segment cloth flag and pulsing pad ring.
+  - `FinishZone`: Gold victory arch with rotating trophy and completion detection.
+  - `Button`: Timed pressure plate with trigger volume and ghost recorder interaction.
+  - `Door`: Barrier door linked to button IDs with state-dependent solidity.
+
+#### Step 3: Polymorphic Level Container, EntityFactory & LevelParseError
+- **Status:** COMPLETED
+- **Details:**
+  - Implemented `Level` class owning all entities inside `std::vector<std::unique_ptr<Entity>>`.
+  - Dispatched `Update()` and `Draw()` polymorphically across all entities through base `Entity*` pointers with zero type switching or downcasting in the main loop.
+  - Implemented `EntityFactory` with static factory method `createEntity(type, stream, worldId)` returning `std::unique_ptr<Entity>`.
+  - Implemented custom exception `LevelParseError : public std::runtime_error` for robust level loading error handling.
+  - Integrated `GhostRecorder` component for recording and replaying player clone actions for puzzle solving.
+  - Verified 100% test pass on headless smoke tests and all 20 levels in the reachability validator.
+
 
 
 

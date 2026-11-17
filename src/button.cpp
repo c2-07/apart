@@ -13,18 +13,22 @@ Button::Button(int id, const Vec3& position, float duration)
       m_duration(duration),
       m_currentTimer(0.0f),
       m_isPressed(false),
-      m_isActive(false) {}
+      m_isActive(false),
+      m_ghostTouching(false) {}
 
 AABB Button::getBounds() const {
-    // Solid base plate
-    return AABB::fromCenterSize(m_position, m_size);
+    // Solid base plate matching original dimensions
+    return AABB::fromCenterSize(
+        Vec3{ m_position.x, m_position.y - 0.15f, m_position.z },
+        Vec3{ 2.2f, 0.3f, 2.2f }
+    );
 }
 
 AABB Button::getTriggerBounds() const {
-    // Top trigger volume
+    // Top trigger volume matching original dimensions
     return AABB::fromCenterSize(
-        Vec3{ m_position.x, m_position.y + 0.25f, m_position.z },
-        Vec3{ 1.4f, 0.3f, 1.4f }
+        Vec3{ m_position.x, m_position.y + 0.3f, m_position.z },
+        Vec3{ 2.0f, 0.7f, 2.0f }
     );
 }
 
@@ -45,18 +49,15 @@ void Button::onPlayerTouch(Player& player) {
 
 void Button::update(float dt, Player& player) {
     bool touching = getTriggerBounds().intersects(player.GetAABB());
-    if (touching) {
-        onPlayerTouch(player);
-    } else {
-        m_isPressed = false;
-    }
-
-    if (m_isActive) {
+    m_isPressed = (touching || m_ghostTouching);
+    if (m_isPressed) {
+        m_currentTimer = m_duration;
+        m_isActive = true;
+    } else if (m_currentTimer > 0.0f) {
         m_currentTimer -= dt;
-        if (m_currentTimer <= 0.0f) {
-            m_currentTimer = 0.0f;
-            m_isActive = false;
-        }
+        m_isActive = (m_currentTimer > 0.0f);
+    } else {
+        m_isActive = false;
     }
 }
 
