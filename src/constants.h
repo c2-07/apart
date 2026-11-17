@@ -73,4 +73,8 @@ namespace Constants {
     constexpr float SHADOW_BASE_RADIUS = 0.95f;
     constexpr float SHADOW_MIN_RADIUS = 0.45f;
     constexpr unsigned char SHADOW_MAX_ALPHA = 175;
+
+    // Checkpoint & Finish Polish (Visual Pass Step 6)
+    constexpr float CHECKPOINT_FLAG_WAVE_SPEED = 6.0f;
+    constexpr float CHECKPOINT_RING_PULSE_SPEED = 4.0f;
 }

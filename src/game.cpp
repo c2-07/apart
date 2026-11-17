@@ -547,7 +547,7 @@ void Game::UpdatePlaying(float frameDelta) {
         if (IsKeyDown(KEY_SPACE)) player.position.y += flySpeed * frameDelta;
         if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_C)) player.position.y -= flySpeed * frameDelta;
 
-        level.Update(frameDelta, player);
+        level.Update(frameDelta, player, &particles);
     } else {
         accumulator += frameDelta;
         while (accumulator >= Constants::PHYSICS_DT) {
@@ -560,7 +560,7 @@ void Game::UpdatePlaying(float frameDelta) {
             input.jumpHeld       = IsKeyDown(KEY_SPACE);
             input.respawnPressed = IsKeyPressed(KEY_R);
 
-            level.Update(Constants::PHYSICS_DT, player);
+            level.Update(Constants::PHYSICS_DT, player, &particles);
             colliders = level.GetSolidColliders();
             player.UpdatePhysics(Constants::PHYSICS_DT, input, camera.GetYawRadians(), colliders, &particles);
 

@@ -200,6 +200,16 @@ cmake --build build
   - Added projected downward raycasted blob shadows for moving platforms (`movers`) and rotating hazard bars (`spinners`) projected onto solid surfaces below with height-dependent scaling and fading.
   - Elevated all projected shadows with `SHADOW_OFFSET_Y = 0.025m` to guarantee zero surface flicker or grazing-angle z-fighting.
 
+### Step 6: Checkpoint & Finish Polish, Waving Flags & Confetti Bursts
+- **Status:** COMPLETED
+- **Features Implemented:**
+  - Checkpoint flags animated with 3 connected waving cloth segments driven by sinusoidal wave equations (`sin(time * 6.0 - s * 0.85)`).
+  - Inactive checkpoints render in neutral gray; activated checkpoints switch to bright gold with a soft pulsing green perimeter ring on the pad (`CHECKPOINT_RING_PULSE_SPEED = 4.0`).
+  - Added celebratory burst of 24 emerald, gold, and cyan cube particles on checkpoint activation (`SpawnCheckpointBurst`).
+  - Finish zone upgraded to a chunky golden victory arch with left/right pillars, cross lintel, pulsing inner portal jewels, and a rotating victory star trophy.
+  - Added 60-particle multi-colored celebratory confetti explosion (`SpawnConfettiBurst`) upon course completion.
+
+
 
 
 

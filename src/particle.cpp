@@ -61,6 +61,67 @@ void ParticleSystem::SpawnLandPuff(Vector3 feetPos, float impactSpeed) {
     }
 }
 
+void ParticleSystem::SpawnCheckpointBurst(Vector3 padPos) {
+    constexpr int count = 24;
+    Color colors[3] = {
+        Color{ 255, 220, 50, 255 }, // Gold
+        Color{ 60, 240, 120, 255 }, // Emerald
+        Color{ 100, 225, 255, 255 } // Cyan
+    };
+    for (int i = 0; i < count; ++i) {
+        float angle = (2.0f * PI * i) / count + RandRange(-0.2f, 0.2f);
+        float speed = RandRange(2.5f, 5.0f);
+        Particle p;
+        p.position = Vector3{
+            padPos.x + cosf(angle) * 0.4f,
+            padPos.y + 0.15f,
+            padPos.z + sinf(angle) * 0.4f
+        };
+        p.velocity = Vector3{
+            cosf(angle) * speed,
+            RandRange(3.5f, 6.5f),
+            sinf(angle) * speed
+        };
+        p.size = RandRange(0.16f, 0.26f);
+        p.maxLife = RandRange(0.6f, 0.95f);
+        p.life = p.maxLife;
+        p.color = colors[i % 3];
+        particles.push_back(p);
+    }
+}
+
+void ParticleSystem::SpawnConfettiBurst(Vector3 center) {
+    constexpr int count = 60;
+    Color palette[5] = {
+        Color{ 255, 215, 0, 255 },   // Gold
+        Color{ 50, 220, 240, 255 },  // Cyan
+        Color{ 255, 60, 150, 255 },  // Magenta
+        Color{ 60, 240, 100, 255 },  // Emerald
+        Color{ 255, 140, 40, 255 }   // Sunset Orange
+    };
+    for (int i = 0; i < count; ++i) {
+        float angle = RandRange(0.0f, 2.0f * PI);
+        float pitch = RandRange(-0.3f, 1.2f);
+        float speed = RandRange(3.0f, 8.0f);
+        Particle p;
+        p.position = Vector3{
+            center.x + RandRange(-0.5f, 0.5f),
+            center.y + RandRange(0.5f, 2.5f),
+            center.z + RandRange(-0.5f, 0.5f)
+        };
+        p.velocity = Vector3{
+            cosf(angle) * cosf(pitch) * speed,
+            sinf(pitch) * speed + 3.0f,
+            sinf(angle) * cosf(pitch) * speed
+        };
+        p.size = RandRange(0.18f, 0.32f);
+        p.maxLife = RandRange(1.2f, 1.8f);
+        p.life = p.maxLife;
+        p.color = palette[i % 5];
+        particles.push_back(p);
+    }
+}
+
 void ParticleSystem::Update(float dt) {
     for (size_t i = 0; i < particles.size();) {
         Particle& p = particles[i];

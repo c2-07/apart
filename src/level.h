@@ -178,7 +178,7 @@ public:
     Level();
     bool LoadFromFile(const std::string& filepath);
     void Reset(Player& player);
-    void Update(float dt, Player& player);
+    void Update(float dt, Player& player, ParticleSystem* particles = nullptr);
     void Draw() const;
     void DrawSkybox() const;
 

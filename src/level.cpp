@@ -495,7 +495,7 @@ void Level::Reset(Player& player) {
     player.Init(spawnPos);
 }
 
-void Level::Update(float dt, Player& player) {
+void Level::Update(float dt, Player& player, ParticleSystem* particles) {
     if (!isCompleted) {
         elapsedTime += dt;
     }
@@ -646,6 +646,9 @@ void Level::Update(float dt, Player& player) {
             player.spawnPoint = cp.position;
             checkpointsActivated++;
             AudioManager::Play(SoundId::CHECKPOINT);
+            if (particles) {
+                particles->SpawnCheckpointBurst(cp.position);
+            }
         }
     }
 
@@ -654,6 +657,9 @@ void Level::Update(float dt, Player& player) {
         if (CheckAABBOverlap(playerAABB, finish.triggerAABB)) {
             isCompleted = true;
             AudioManager::Play(SoundId::FINISH);
+            if (particles) {
+                particles->SpawnConfettiBurst(finish.triggerAABB.GetCenter());
+            }
             if (elapsedTime <= parTime && deaths == 0) {
                 starRating = 3;
             } else if (elapsedTime <= parTime * 1.4f) {
@@ -962,34 +968,105 @@ void Level::Draw() const {
         }
     }
 
-    // 10. Checkpoints
+    // 10. Checkpoints (Waving flag cloth & pulsing pad ring)
+    float timeVal = static_cast<float>(GetTime());
     for (const auto& cp : checkpoints) {
         Vector3 padCenter = { cp.position.x, cp.position.y + Constants::CHECKPOINT_PAD_OFFSET_Y, cp.position.z };
-        Color padColor = cp.activated ? Color{ 80, 220, 100, 255 } : Color{ 180, 180, 190, 255 };
+        Color padColor = cp.activated ? Color{ 80, 220, 100, 255 } : Color{ 175, 180, 190, 255 };
         DrawCube(padCenter, 3.0f, Constants::CHECKPOINT_PAD_HEIGHT, 3.0f, padColor);
         DrawCubeWires(padCenter, 3.02f, Constants::CHECKPOINT_PAD_HEIGHT + 0.01f, 3.02f, DarkenColor(padColor, 0.65f));
 
-        Vector3 poleCenter = { cp.position.x - 1.0f, cp.position.y + 1.25f, cp.position.z - 1.0f };
-        DrawCube(poleCenter, 0.15f, 2.5f, 0.15f, Color{ 70, 70, 80, 255 });
+        // Pulsing glowing ring on activated checkpoint pad
+        if (cp.activated) {
+            float ringPulse = 0.5f + 0.5f * sinf(timeVal * Constants::CHECKPOINT_RING_PULSE_SPEED);
+            Color ringCol = Color{ 80, 240, 130, static_cast<unsigned char>(180 * ringPulse) };
+            float ringRadius = 1.35f;
+            int dots = 12;
+            for (int i = 0; i < dots; ++i) {
+                float a = (2.0f * PI * i) / dots;
+                Vector3 rPos = {
+                    cp.position.x + cosf(a) * ringRadius,
+                    cp.position.y + Constants::CHECKPOINT_PAD_OFFSET_Y + 0.035f,
+                    cp.position.z + sinf(a) * ringRadius
+                };
+                DrawCube(rPos, 0.18f, 0.04f, 0.18f, ringCol);
+            }
+        }
 
-        Vector3 flagCenter = { cp.position.x - 0.6f, cp.position.y + 2.1f, cp.position.z - 1.0f };
-        Color flagColor = cp.activated ? Color{ 255, 215, 0, 255 } : Color{ 140, 150, 160, 255 };
-        DrawCube(flagCenter, 0.7f, 0.5f, 0.05f, flagColor);
-        DrawCubeWires(flagCenter, 0.72f, 0.52f, 0.07f, DarkenColor(flagColor, 0.6f));
+        // Checkpoint flag pole
+        Vector3 poleCenter = { cp.position.x - 1.0f, cp.position.y + 1.25f, cp.position.z - 1.0f };
+        DrawCube(poleCenter, 0.15f, 2.5f, 0.15f, Color{ 60, 65, 75, 255 });
+        DrawCubeWires(poleCenter, 0.16f, 2.52f, 0.16f, Color{ 35, 40, 50, 255 });
+
+        // Waving flag cloth assembled from 3 connected segments
+        Color flagColor = cp.activated ? Color{ 255, 220, 25, 255 } : Color{ 145, 150, 160, 255 };
+        Color flagWire = DarkenColor(flagColor, Constants::OUTLINE_DARKEN_FACTOR);
+        float flagBaseX = cp.position.x - 1.0f;
+        float flagY = cp.position.y + 2.1f;
+        float flagZ = cp.position.z - 1.0f;
+
+        for (int s = 0; s < 3; ++s) {
+            float segWidth = 0.28f;
+            float segCenterX = flagBaseX + 0.15f + s * segWidth;
+            float waveOffsetZ = sinf(timeVal * Constants::CHECKPOINT_FLAG_WAVE_SPEED - s * 0.85f) * (0.02f + s * 0.045f);
+            Vector3 segPos = { segCenterX, flagY, flagZ + waveOffsetZ };
+            DrawCube(segPos, segWidth, 0.45f, 0.04f, flagColor);
+            DrawCubeWires(segPos, segWidth + Constants::OUTLINE_EXPANSION, 0.46f, 0.05f, flagWire);
+        }
     }
 
-    // 11. Finish zone
+    // 11. Finish Zone (Celebratory victory arch with pulsing portal gems and rotating trophy)
     if (hasFinish) {
         Vector3 fCenter = finish.triggerAABB.GetCenter();
         Vector3 fSize = finish.triggerAABB.GetSize();
-        Vector3 renderCenter = { fCenter.x, fCenter.y + Constants::SURFACE_DECAL_OFFSET_Y, fCenter.z };
-        DrawCube(renderCenter, fSize.x, fSize.y, fSize.z, Color{ 255, 215, 0, 160 });
-        DrawCubeWires(renderCenter, fSize.x + 0.04f, fSize.y + 0.04f, fSize.z + 0.04f, Color{ 220, 160, 0, 255 });
 
-        float t = static_cast<float>(GetTime());
-        Vector3 trophyPos = { fCenter.x, fCenter.y + 1.5f + sinf(t * 3.0f) * 0.2f, fCenter.z };
-        DrawCube(trophyPos, 1.2f, 1.2f, 1.2f, Color{ 255, 230, 80, 255 });
-        DrawCubeWires(trophyPos, 1.22f, 1.22f, 1.22f, Color{ 200, 150, 20, 255 });
+        // Base pad
+        Vector3 basePadPos = { fCenter.x, finish.triggerAABB.min.y + Constants::SURFACE_DECAL_OFFSET_Y + 0.02f, fCenter.z };
+        DrawCube(basePadPos, fSize.x + 0.4f, 0.08f, fSize.z + 0.4f, Color{ 245, 195, 45, 255 });
+        DrawCubeWires(basePadPos, fSize.x + 0.42f, 0.09f, fSize.z + 0.42f, Color{ 185, 140, 20, 255 });
+
+        // Victory Arch: Left & Right Pillars
+        float archHeight = fSize.y * 1.35f;
+        float pillarDist = fSize.x * 0.48f;
+        Vector3 leftPillar = { fCenter.x - pillarDist, fCenter.y + 0.2f, fCenter.z };
+        Vector3 rightPillar = { fCenter.x + pillarDist, fCenter.y + 0.2f, fCenter.z };
+        Color archGold = Color{ 255, 205, 45, 255 };
+        Color archGoldWire = Color{ 190, 145, 20, 255 };
+
+        DrawCube(leftPillar, 0.6f, archHeight, 0.6f, archGold);
+        DrawCubeWires(leftPillar, 0.62f, archHeight + 0.02f, 0.62f, archGoldWire);
+        DrawCube(rightPillar, 0.6f, archHeight, 0.6f, archGold);
+        DrawCubeWires(rightPillar, 0.62f, archHeight + 0.02f, 0.62f, archGoldWire);
+
+        // Top Cross Lintel
+        Vector3 lintelPos = { fCenter.x, fCenter.y + archHeight * 0.5f + 0.2f, fCenter.z };
+        DrawCube(lintelPos, fSize.x + 0.8f, 0.65f, 0.65f, archGold);
+        DrawCubeWires(lintelPos, fSize.x + 0.82f, 0.67f, 0.67f, archGoldWire);
+
+        // Pulsing glow ring inside portal opening
+        int portalGems = 16;
+        float portalRadX = fSize.x * 0.38f;
+        float portalRadY = archHeight * 0.38f;
+        float glowPulse = 0.5f + 0.5f * sinf(timeVal * 3.5f);
+        Color gemCol = Color{ 255, static_cast<unsigned char>(210 + 45 * glowPulse), static_cast<unsigned char>(60 + 120 * glowPulse), 255 };
+        for (int i = 0; i < portalGems; ++i) {
+            float a = (2.0f * PI * i) / portalGems;
+            Vector3 gemPos = {
+                fCenter.x + cosf(a) * portalRadX,
+                fCenter.y + sinf(a) * portalRadY,
+                fCenter.z
+            };
+            DrawCube(gemPos, 0.16f, 0.16f, 0.16f, gemCol);
+        }
+
+        // Floating rotating victory trophy in archway center
+        Vector3 trophyPos = { fCenter.x, fCenter.y + sinf(timeVal * 3.0f) * 0.18f, fCenter.z };
+        rlPushMatrix();
+        rlTranslatef(trophyPos.x, trophyPos.y, trophyPos.z);
+        rlRotatef(timeVal * 55.0f, 0.0f, 1.0f, 0.0f);
+        DrawCube(Vector3{ 0.0f, 0.0f, 0.0f }, 1.1f, 1.1f, 1.1f, Color{ 255, 230, 80, 255 });
+        DrawCubeWires(Vector3{ 0.0f, 0.0f, 0.0f }, 1.12f, 1.12f, 1.12f, Color{ 200, 150, 20, 255 });
+        rlPopMatrix();
     }
 }
 
