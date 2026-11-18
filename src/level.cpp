@@ -83,6 +83,7 @@ bool Level::LoadFromFile(const std::string& filepath) {
     m_killY = -20.0f;
     m_parTime = 60.0f;
     m_spawnPos = Vec3{ 0.0f, 1.0f, 0.0f };
+    m_is2D = (filepath.find("2d") != std::string::npos || filepath.find("level_2d") != std::string::npos);
     hasFinish = false;
     isCompleted = false;
     elapsedTime = 0.0f;
@@ -120,6 +121,11 @@ bool Level::LoadFromFile(const std::string& filepath) {
                     m_spawnPos = Vec3{ x, y, z };
                 } else {
                     throw LevelParseError("Invalid spawn coordinates");
+                }
+            } else if (token == "mode") {
+                std::string modeStr;
+                if (ss >> modeStr) {
+                    m_is2D = (modeStr == "2d" || modeStr == "2D");
                 }
             } else {
                 // Factory instantiation
@@ -179,6 +185,7 @@ void Level::Reset(Player& player) {
     }
 
     player.init(m_spawnPos);
+    player.set2DMode(m_is2D, m_spawnPos.z);
 }
 
 void Level::Update(float dt, Player& player, ParticleSystem* particles) {

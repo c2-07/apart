@@ -49,6 +49,10 @@ private:
     // Coins collected
     int m_coins;
 
+    // 2D Side-Scroller Mode
+    bool m_is2DMode{false};
+    float m_lockedZ{0.0f};
+
     PlayerAnimator m_animator;
 
 public:
@@ -63,6 +67,17 @@ public:
     int getCoins() const { return m_coins; }
     void addCoins(int amount = 1) { m_coins += amount; }
     void setCoins(int amount) { m_coins = amount; }
+
+    // 2D Mode Interface
+    void set2DMode(bool enabled, float lockedZ = 0.0f) {
+        m_is2DMode = enabled;
+        m_lockedZ = lockedZ;
+        if (enabled) {
+            m_position.z = m_lockedZ;
+            m_velocity.z = 0.0f;
+        }
+    }
+    bool is2DMode() const { return m_is2DMode; }
 
     // Health & Damage interface
     void takeDamage(const Vector2& knockbackDirection);

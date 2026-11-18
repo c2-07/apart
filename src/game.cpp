@@ -132,6 +132,9 @@ Game::Game()
       showFps(false),
       previousDeaths(0),
       accumulator(0.0f),
+      is2DMode(false),
+      modeToastTimer(0.0f),
+      modeToastText(""),
       lightingShader(),
       shaderLoaded(false) {}
 
@@ -169,6 +172,10 @@ void Game::LoadLevelByIndex(int index) {
     level.LoadFromFile(LEVEL_PATHS[currentLevelIdx]);
     level.Reset(player);
     player.setColorIndex(save.chosenColor);
+
+    // Synchronize 2D mode with level definition
+    Set2DMode(level.is2D());
+
     camera.init(player.getPosition());
     particles.Clear();
     previousDeaths = 0;
@@ -178,6 +185,43 @@ void Game::LoadLevelByIndex(int index) {
     displayedCheckpoints = 0.0f;
     levelPlayTime = 0.0f;
     accumulator = 0.0f;
+}
+
+void Game::LoadLevelByPath(const std::string& path) {
+    level.LoadFromFile(path);
+    level.Reset(player);
+    player.setColorIndex(save.chosenColor);
+
+    Set2DMode(level.is2D());
+
+    camera.init(player.getPosition());
+    particles.Clear();
+    previousDeaths = 0;
+    screenShakeTimer = 0.0f;
+    respawnFadeAlpha = 0.0f;
+    levelLoadFadeAlpha = 1.0f;
+    displayedCheckpoints = 0.0f;
+    levelPlayTime = 0.0f;
+    accumulator = 0.0f;
+}
+
+void Game::Set2DMode(bool enabled) {
+    is2DMode = enabled;
+    float targetZ = level.getSpawnPos().z;
+    player.set2DMode(is2DMode, targetZ);
+    camera.setMode(is2DMode ? CameraMode::SIDE_SCROLL_2D : CameraMode::ORBIT_3D, targetZ);
+    modeToastText = is2DMode ? "2D Side-Scroller View (Press F2 or C for 3D)" : "3D Orbit View (Press F2 or C for 2D)";
+    modeToastTimer = 2.5f;
+}
+
+void Game::Toggle2DMode() {
+    Set2DMode(!is2DMode);
+}
+
+void Game::StartIn2DMode() {
+    LoadLevelByPath("assets/levels2d/level_2d_1.lvl");
+    Set2DMode(true);
+    RequestStateChange(StateType::PLAYING);
 }
 
 void Game::CompleteLevel() {
@@ -235,6 +279,9 @@ void Game::ChangeState(std::unique_ptr<GameState> newState) {
 }
 
 void Game::Update(float frameDelta) {
+    if (modeToastTimer > 0.0f) {
+        modeToastTimer = std::max(0.0f, modeToastTimer - frameDelta);
+    }
     if (m_pendingState) {
         ChangeState(std::move(m_pendingState));
     }

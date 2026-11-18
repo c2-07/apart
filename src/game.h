@@ -75,6 +75,11 @@ public:
     int previousDeaths;
     float accumulator;
 
+    // 2D Side-Scroller Mode
+    bool is2DMode;
+    float modeToastTimer;
+    std::string modeToastText;
+
     // Visual Pass Shader (RAII Resource Holder)
     ShaderHolder lightingShader;
     bool shaderLoaded;
@@ -94,6 +99,10 @@ public:
     void Draw() const;
 
     void LoadLevelByIndex(int index);
+    void LoadLevelByPath(const std::string& path);
+    void Set2DMode(bool enabled);
+    void Toggle2DMode();
+    void StartIn2DMode();
     void CompleteLevel();
     int GetTotalLevels() const { return 20; }
 

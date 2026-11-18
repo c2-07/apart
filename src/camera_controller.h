@@ -7,12 +7,22 @@
 namespace obby {
 
 /**
- * @brief Third-person orbiting camera controller with collision pull-in and dynamic FOV.
+ * @brief Camera perspective modes.
+ */
+enum class CameraMode {
+    ORBIT_3D,
+    SIDE_SCROLL_2D
+};
+
+/**
+ * @brief Third-person orbiting and 2D side-scrolling camera controller with collision pull-in and dynamic FOV.
  * Encapsulates spherical coordinate orbit mathematics, target smoothing, lookahead offsets,
- * raycast obstacle avoidance, and dynamic speed-proportional field of view.
+ * raycast obstacle avoidance, locked side-scrolling tracking, and dynamic speed-proportional field of view.
  */
 class CameraController {
 private:
+    CameraMode m_mode{CameraMode::ORBIT_3D};
+    float m_lockedZ{0.0f};     // Locked Z depth plane for 2D side-scroller mode
     Vec3 m_targetPos;          // Smoothed focus point in world space
     float m_yaw;               // Horizontal orbit angle in degrees
     float m_pitch;             // Vertical orbit angle in degrees [-10, 70]
@@ -31,6 +41,14 @@ public:
 
     Camera3D getRaylibCamera() const;
     float getYawRadians() const;
+
+    // Camera Mode Controls
+    void setMode(CameraMode mode, float lockedZ = 0.0f);
+    CameraMode getMode() const { return m_mode; }
+    bool is2D() const { return m_mode == CameraMode::SIDE_SCROLL_2D; }
+    void toggleMode() {
+        setMode(is2D() ? CameraMode::ORBIT_3D : CameraMode::SIDE_SCROLL_2D, m_lockedZ);
+    }
 
     // Encapsulated Getters
     const Vec3& getTargetPos() const { return m_targetPos; }

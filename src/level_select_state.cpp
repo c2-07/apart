@@ -75,8 +75,21 @@ void LevelSelectState::draw() const {
         }
     }
 
+    // 2D Showcase Level buttons
+    float bottomY = (float)(sh - 65);
+    if (UI::Button(Rectangle{ 60.0f, bottomY, 220, 42 }, "2D LEVEL 1 (GATEWAY)", Color{ 35, 120, 180, 255 }, Color{ 55, 150, 220, 255 }, WHITE, 14)) {
+        m_game.LoadLevelByPath("assets/levels2d/level_2d_1.lvl");
+        m_game.Set2DMode(true);
+        m_game.RequestStateChange(StateType::PLAYING);
+    }
+    if (UI::Button(Rectangle{ 300.0f, bottomY, 220, 42 }, "2D LEVEL 2 (CAVERN)", Color{ 45, 140, 150, 255 }, Color{ 65, 170, 180, 255 }, WHITE, 14)) {
+        m_game.LoadLevelByPath("assets/levels2d/level_2d_2.lvl");
+        m_game.Set2DMode(true);
+        m_game.RequestStateChange(StateType::PLAYING);
+    }
+
     // Back Button
-    if (UI::Button(Rectangle{ (sw - 180) * 0.5f, (float)(sh - 65), 180, 42 }, "BACK TO MENU", Color{ 70, 80, 95, 255 }, Color{ 95, 110, 130, 255 }, WHITE, 16)) {
+    if (UI::Button(Rectangle{ (float)(sw - 200), bottomY, 180, 42 }, "BACK TO MENU", Color{ 70, 80, 95, 255 }, Color{ 95, 110, 130, 255 }, WHITE, 16)) {
         m_game.RequestStateChange(StateType::MAIN_MENU);
     }
 }

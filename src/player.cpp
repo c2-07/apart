@@ -141,17 +141,27 @@ void Player::updatePhysics(float dt, const PlayerInput& input, float cameraYaw,
     float previousFallSpeed = m_velocity.y;
 
     // Camera-relative input direction
-    Vec3 forwardVec = { -sinf(cameraYaw), 0.0f, -cosf(cameraYaw) };
-    Vec3 rightVec   = {  cosf(cameraYaw), 0.0f, -sinf(cameraYaw) };
-
-    Vec3 wishDir = (forwardVec * input.moveForward) + (rightVec * input.moveRight);
-    wishDir.y = 0.0f;
+    Vec3 wishDir;
+    if (m_is2DMode) {
+        wishDir = Vec3{ input.moveRight, 0.0f, 0.0f };
+        m_velocity.z = 0.0f;
+        m_position.z = m_lockedZ;
+    } else {
+        Vec3 forwardVec = { -sinf(cameraYaw), 0.0f, -cosf(cameraYaw) };
+        Vec3 rightVec   = {  cosf(cameraYaw), 0.0f, -sinf(cameraYaw) };
+        wishDir = (forwardVec * input.moveForward) + (rightVec * input.moveRight);
+        wishDir.y = 0.0f;
+    }
 
     float wishSpeed = wishDir.length();
     if (wishSpeed > 0.001f) {
         wishDir = wishDir.normalized();
         wishSpeed = std::min(wishSpeed, 1.0f);
-        m_targetYaw = atan2f(wishDir.x, wishDir.z);
+        if (m_is2DMode) {
+            m_targetYaw = (wishDir.x >= 0.0f) ? (PI * 0.5f) : (-PI * 0.5f);
+        } else {
+            m_targetYaw = atan2f(wishDir.x, wishDir.z);
+        }
     } else {
         wishSpeed = 0.0f;
     }
@@ -294,6 +304,11 @@ void Player::updatePhysics(float dt, const PlayerInput& input, float cameraYaw,
         }
     }
     m_isGrounded = landedThisTick;
+
+    if (m_is2DMode) {
+        m_position.z = m_lockedZ;
+        m_velocity.z = 0.0f;
+    }
 
     // Update procedural animator
     float hSpeed = std::sqrt(m_velocity.x * m_velocity.x + m_velocity.z * m_velocity.z);

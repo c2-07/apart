@@ -588,6 +588,7 @@ static int RunSmokeTest() {
 }
 
 int main(int argc, char* argv[]) {
+    bool startIn2D = false;
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--smoke-test") {
@@ -596,6 +597,9 @@ int main(int argc, char* argv[]) {
         if (arg == "--validate-levels" || arg == "--validate") {
             bool ok = LevelValidator::ValidateAllLevels(ALL_LEVEL_FILES);
             return ok ? 0 : 1;
+        }
+        if (arg == "--2d" || arg == "-2d") {
+            startIn2D = true;
         }
     }
 
@@ -615,6 +619,9 @@ int main(int argc, char* argv[]) {
 
     Game game;
     game.Init();
+    if (startIn2D) {
+        game.StartIn2DMode();
+    }
 
     while (!WindowShouldClose()) {
         float frameDelta = GetFrameTime();

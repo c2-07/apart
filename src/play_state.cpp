@@ -61,6 +61,11 @@ void PlayState::handleInput() {
     if (IsKeyPressed(KEY_F3)) {
         m_game.showFps = !m_game.showFps;
     }
+
+    // F2 or C: Toggle between 2D Side-Scroller and 3D Orbit Camera
+    if (IsKeyPressed(KEY_F2) || IsKeyPressed(KEY_C)) {
+        m_game.Toggle2DMode();
+    }
 }
 
 void PlayState::update(float frameDelta) {
@@ -221,6 +226,21 @@ void PlayState::draw() const {
     if (m_game.showFps) {
         DrawFPS(GetScreenWidth() - 85, 20);
     }
+
+    // 2D/3D Mode toast banner
+    if (m_game.modeToastTimer > 0.0f) {
+        float alpha = std::min(1.0f, m_game.modeToastTimer);
+        int tw = MeasureText(m_game.modeToastText.c_str(), 18);
+        Rectangle banner = { (GetScreenWidth() - tw - 40) * 0.5f, 60.0f, (float)(tw + 40), 32.0f };
+        DrawRectangleRounded(banner, 0.3f, 4, ColorAlpha(Color{ 15, 20, 30, 220 }, alpha));
+        DrawRectangleRoundedLines(banner, 0.3f, 4, ColorAlpha(Color{ 70, 160, 240, 255 }, alpha));
+        DrawText(m_game.modeToastText.c_str(), (int)(banner.x + 20), (int)(banner.y + 7), 18, ColorAlpha(Color{ 255, 220, 60, 255 }, alpha));
+    }
+
+    // Camera Mode badge in bottom-right corner
+    const char* modeBadge = m_game.is2DMode ? "[F2/C] View: 2D Side-Scroller" : "[F2/C] View: 3D Orbit";
+    DrawRectangle(GetScreenWidth() - 215, GetScreenHeight() - 30, 205, 22, Color{ 15, 20, 30, 180 });
+    DrawText(modeBadge, GetScreenWidth() - 205, GetScreenHeight() - 26, 12, Color{ 180, 215, 255, 220 });
 }
 
 } // namespace obby

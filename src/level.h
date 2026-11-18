@@ -32,6 +32,7 @@ private:
     float m_killY;
     float m_parTime;
     Vec3 m_spawnPos;
+    bool m_is2D{false};
 
     // Polymorphic entity container (Level is the unique owner)
     std::vector<std::unique_ptr<Entity>> m_entities;
@@ -93,6 +94,8 @@ public:
 
     // Core Level lifecycle
     bool LoadFromFile(const std::string& filepath);
+    bool is2D() const { return m_is2D; }
+    void set2D(bool enabled) { m_is2D = enabled; }
     void Reset(Player& player);
     void Update(float dt, Player& player, ParticleSystem* particles = nullptr);
     void Draw() const;
