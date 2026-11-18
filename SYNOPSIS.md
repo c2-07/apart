@@ -9,13 +9,12 @@
 
 ### Student & Institutional Details
 
-- **Student Name:** [Student Name]
-- **Roll Number / Registration ID:** [Roll Number / Registration ID]
-- **Degree / Programme:** [Degree / Programme, e.g., B.Tech in Computer Science and Engineering]
-- **Department:** [Department Name, e.g., Department of Computer Science & Engineering]
-- **Institution / University:** [College / University Name]
-- **Project Supervisor / Guide:** [Guide / Instructor Name, Designation]
-- **Date of Submission:** [Submission Date, e.g., November 2026]
+- **Student Name:** Gourav Meena
+- **Roll Number / Registration ID:** BT25CSE138
+- **Degree / Programme:** B.Tech in Computer Science and Engineering
+- **Department:**  Computer Science & Engineering
+- **Project Supervisor / Guide:** Guide / Instructor Name, Designation
+- **Date of Submission:** November 2026
 
 ---
 
@@ -238,20 +237,20 @@ classDiagram
 
 The codebase was engineered specifically to demonstrate mastery of classical and modern object-oriented programming paradigms in C++17:
 
-| OOP Concept | Project Location / Class | Architectural Rationale & Implementation Detail |
-| :--- | :--- | :--- |
-| **Abstraction** | `Entity`, `IGameState` | Hides implementation complexity behind pure virtual interfaces (`update()`, `draw()`). The `Level` orchestrates game objects without knowing their internal geometric or behavioral representations. |
-| **Encapsulation** | `Player`, `Level`, `AABB` | Class data members are private or protected (e.g., `Player::m_position`, `m_hearts`). Mutations occur strictly through public member functions (`takeDamage()`, `heal()`, `applyImpulse()`), enforcing invariant constraints. |
-| **Single Inheritance** | `Platform : public Entity` | Inherits spatial properties (`m_position`, `m_size`, `m_color`) and lifecycle interfaces, overriding only drawing and collision queries. |
-| **Multi-Level Inheritance** | `MovingPlatform : public Platform : public Entity` | Reuses static platform geometry and collision routines while adding motion trajectory, periodic interpolation, and frame displacement exports. |
-| **Hierarchical Inheritance** | `Walker : public Enemy : public Entity`<br>`Flyer : public Enemy : public Entity` | Shares combat hitboxes and flattening animations via `Enemy` while customizing horizontal ground patrol and vertical sinusoidal flight AI. |
-| **Runtime Polymorphism** | `Entity::update()`, `Entity::draw()` | Dynamic method dispatch mediated by compiler-generated virtual method tables (`vptr`/`vtable`), enabling heterogeneous collections (`std::vector<std::unique_ptr<Entity>>`). |
-| **Interface Segregation (ISP)** | `IGameState` | A minimal, focused abstract interface (`enter`, `update`, `draw`, `exit`) decoupling high-level application states from concrete scene implementations. |
-| **Factory Pattern** | `EntityFactory` | Encapsulates entity instantiation via static dispatch (`createEntity(type, stream)`), mapping serialized text tokens directly to concrete heap-allocated entity instances. |
-| **State Pattern** | `StateManager`, `PlayingState`, `PauseState` | Encapsulates distinct game modes into independent objects, allowing runtime state swapping, push/pop modal overlays, and clean entry/exit lifecycle transitions. |
-| **RAII & Smart Pointers** | `std::unique_ptr`, `ShaderScope` | Eliminates manual `new`/`delete` operations. Exclusive heap allocations are bound to object lifetimes, preventing resource leaks and dangling pointers during exceptions or level transitions. |
-| **Operator Overloading** | `AABB::operator==`, `Vector3` Math | Overloads algebraic operators (`+`, `-`, `*`, `+=`, `==`) on spatial bounding volumes and vectors to yield readable, expressive mathematical syntax. |
-| **Composition over Inheritance** | `Player` owns `PlayerAnimator` | The player delegates skeletal transformation and squash-and-stretch rendering to an internal animator object rather than inheriting from an animation base class. |
+| OOP Concept                      | Project Location / Class                                                          | Architectural Rationale & Implementation Detail                                                                                                                                                                               |
+| :------------------------------- | :-------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Abstraction**                  | `Entity`, `IGameState`                                                            | Hides implementation complexity behind pure virtual interfaces (`update()`, `draw()`). The `Level` orchestrates game objects without knowing their internal geometric or behavioral representations.                          |
+| **Encapsulation**                | `Player`, `Level`, `AABB`                                                         | Class data members are private or protected (e.g., `Player::m_position`, `m_hearts`). Mutations occur strictly through public member functions (`takeDamage()`, `heal()`, `applyImpulse()`), enforcing invariant constraints. |
+| **Single Inheritance**           | `Platform : public Entity`                                                        | Inherits spatial properties (`m_position`, `m_size`, `m_color`) and lifecycle interfaces, overriding only drawing and collision queries.                                                                                      |
+| **Multi-Level Inheritance**      | `MovingPlatform : public Platform : public Entity`                                | Reuses static platform geometry and collision routines while adding motion trajectory, periodic interpolation, and frame displacement exports.                                                                                |
+| **Hierarchical Inheritance**     | `Walker : public Enemy : public Entity`<br>`Flyer : public Enemy : public Entity` | Shares combat hitboxes and flattening animations via `Enemy` while customizing horizontal ground patrol and vertical sinusoidal flight AI.                                                                                    |
+| **Runtime Polymorphism**         | `Entity::update()`, `Entity::draw()`                                              | Dynamic method dispatch mediated by compiler-generated virtual method tables (`vptr`/`vtable`), enabling heterogeneous collections (`std::vector<std::unique_ptr<Entity>>`).                                                  |
+| **Interface Segregation (ISP)**  | `IGameState`                                                                      | A minimal, focused abstract interface (`enter`, `update`, `draw`, `exit`) decoupling high-level application states from concrete scene implementations.                                                                       |
+| **Factory Pattern**              | `EntityFactory`                                                                   | Encapsulates entity instantiation via static dispatch (`createEntity(type, stream)`), mapping serialized text tokens directly to concrete heap-allocated entity instances.                                                    |
+| **State Pattern**                | `StateManager`, `PlayingState`, `PauseState`                                      | Encapsulates distinct game modes into independent objects, allowing runtime state swapping, push/pop modal overlays, and clean entry/exit lifecycle transitions.                                                              |
+| **RAII & Smart Pointers**        | `std::unique_ptr`, `ShaderScope`                                                  | Eliminates manual `new`/`delete` operations. Exclusive heap allocations are bound to object lifetimes, preventing resource leaks and dangling pointers during exceptions or level transitions.                                |
+| **Operator Overloading**         | `AABB::operator==`, `Vector3` Math                                                | Overloads algebraic operators (`+`, `-`, `*`, `+=`, \`==`) on spatial bounding volumes and vectors to yield readable, expressive mathematical syntax.                                                                         |
+| **Composition over Inheritance** | `Player` owns `PlayerAnimator`                                                    | The player delegates skeletal transformation and squash-and-stretch rendering to an internal animator object rather than inheriting from an animation base class.                                                             |
 
 ---
 
